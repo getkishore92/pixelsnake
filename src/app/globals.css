@@ -402,6 +402,11 @@ body {
   opacity: 1;
 }
 
+.contribution-map.is-focus .contribution-snake-cell.is-scatter {
+  background: var(--color-contrib-active-2);
+  opacity: 1;
+}
+
 .contribution-snake-board.is-failed .contribution-snake-cell {
   animation: snake-fail-wave 700ms var(--ease-standard) both;
   animation-delay: var(--fail-delay, 0ms);

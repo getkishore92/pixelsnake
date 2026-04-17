@@ -35,6 +35,22 @@ function getWrappedHead(head: Cell, direction: Cell, columns: number, rows: numb
   };
 }
 
+function generateScatterPixels(cols: number, rs: number, occupied: Set<string>, count: number): Set<string> {
+  const available: Cell[] = [];
+  for (let x = 0; x < cols; x++) {
+    for (let y = 0; y < rs; y++) {
+      if (!occupied.has(cellKey({ x, y }))) available.push({ x, y });
+    }
+  }
+  for (let i = available.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [available[i], available[j]] = [available[j], available[i]];
+  }
+  const scatter = new Set<string>();
+  available.slice(0, Math.min(count, available.length)).forEach((c) => scatter.add(cellKey(c)));
+  return scatter;
+}
+
 function getRandomOpenCell(columns: number, rows: number, occupied: Set<string>) {
   const available: Cell[] = [];
 
@@ -96,6 +112,7 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
   const [topScore, setTopScore] = useState(0);
   const [isFailed, setIsFailed] = useState(false);
   const [failOrigin, setFailOrigin] = useState<Cell | null>(null);
+  const [gamePixels, setGamePixels] = useState<Set<string>>(new Set());
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [desktopCellSize, setDesktopCellSize] = useState<number | null>(null);
   const boardRef = useRef<HTMLDivElement | null>(null);
@@ -329,6 +346,7 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
         (window as unknown as { webkitAudioContext: typeof AudioContext })
           .webkitAudioContext;
       audioCtxRef.current = new AudioCtx();
+      audioCtxRef.current.resume();
     } catch {
       // audio not available
     }
@@ -399,12 +417,15 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
       { x: (origin.x - 2 + columns) % columns, y: origin.y },
     ];
     const occupied = new Set(initialSnake.map((cell) => cellKey(cell)));
-
+    const foodCell = getRandomOpenCell(columns, rows, occupied);
+    const allOccupied = new Set(occupied);
+    if (foodCell) allOccupied.add(cellKey(foodCell));
+    setGamePixels(generateScatterPixels(columns, rows, allOccupied, Math.floor(columns * rows * 0.06)));
     setSnake(initialSnake);
     setDirection({ x: 1, y: 0 });
     queuedDirectionRef.current = { x: 1, y: 0 };
     setQueuedDirection({ x: 1, y: 0 });
-    setFood(getRandomOpenCell(columns, rows, occupied));
+    setFood(foodCell);
     setScore(0);
     setIsFailed(false);
     setIsPaused(false);
@@ -492,7 +513,7 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
 
       <div
         ref={mapRef}
-        className={`contribution-map ${isPlaying ? "is-focus" : ""}`}
+        className={`contribution-map ${(isPlaying || isPaused || isFailed) ? "is-focus" : ""}`}
         style={{
           ["--contribution-columns" as string]: String(columns),
           ...(desktopCellSize ? { ["--contribution-cell-size" as string]: `${desktopCellSize}px` } : {}),
@@ -531,6 +552,8 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
                     const cell = { x: weekIndex, y: dayIndex };
                     const isSnakeCell = snakeSet.has(cellKey(cell));
                     const isFoodCell = food ? cellsEqual(cell, food) : false;
+                    const gameActive = isPlaying || isPaused || isFailed;
+                    const isScatterCell = gameActive && gamePixels.has(cellKey(cell));
                     const failDistance = failOrigin
                       ? Math.abs(cell.x - failOrigin.x) + Math.abs(cell.y - failOrigin.y)
                       : 0;
@@ -539,7 +562,7 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
                       <button
                         key={day.date || `${weekIndex}-${dayIndex}`}
                         type="button"
-                        className={`contribution-snake-cell level-${day.level} ${isSnakeCell ? "is-snake" : ""} ${isFoodCell ? "is-food" : ""}`}
+                        className={`contribution-snake-cell ${gameActive ? "level-0" : `level-${day.level}`} ${isSnakeCell ? "is-snake" : ""} ${isFoodCell ? "is-food" : ""} ${isScatterCell ? "is-scatter" : ""}`}
                         style={
                           isFailed && !prefersReducedMotion
                             ? ({ ["--fail-delay" as string]: `${failDistance * 18}ms` } as CSSProperties)
