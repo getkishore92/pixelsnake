@@ -10,7 +10,7 @@ A playable snake game built on your GitHub contribution graph. Click any cell to
 
 ---
 <p align="left">
-  <img src="pixelsnake-logo.png" alt="pixelsnake logo" width="180" />
+  <img src="pixelsnake-logo.png" alt="pixelsnake logo" width="400" />
 </p>
 
 
