@@ -1,15 +1,18 @@
 "use client";
 
-import type { CSSProperties } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { ContributionCalendarData } from "@/lib/github-contributions";
-
 // ─── Customization ───────────────────────────────────────────────────────────
 // Snake speed in milliseconds per tick. Lower = faster. Default: 120.
 const TICK_MS = 120;
 // ─────────────────────────────────────────────────────────────────────────────
 
-type Cell = { x: number; y: number };
+import type { CSSProperties, MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { ContributionCalendarData } from "@/lib/github-contributions";
+
+type Cell = {
+  x: number;
+  y: number;
+};
 
 type ContributionSnakeProps = {
   data: ContributionCalendarData;
@@ -25,31 +28,29 @@ function cellsEqual(a: Cell, b: Cell) {
   return a.x === b.x && a.y === b.y;
 }
 
-function getWrappedHead(
-  head: Cell,
-  direction: Cell,
-  columns: number,
-  rows: number
-): Cell {
+function getWrappedHead(head: Cell, direction: Cell, columns: number, rows: number): Cell {
   return {
     x: (head.x + direction.x + columns) % columns,
     y: (head.y + direction.y + rows) % rows,
   };
 }
 
-function getRandomOpenCell(
-  columns: number,
-  rows: number,
-  occupied: Set<string>
-) {
+function getRandomOpenCell(columns: number, rows: number, occupied: Set<string>) {
   const available: Cell[] = [];
+
   for (let x = 0; x < columns; x += 1) {
     for (let y = 0; y < rows; y += 1) {
       const candidate = { x, y };
-      if (!occupied.has(cellKey(candidate))) available.push(candidate);
+      if (!occupied.has(cellKey(candidate))) {
+        available.push(candidate);
+      }
     }
   }
-  if (available.length === 0) return null;
+
+  if (available.length === 0) {
+    return null;
+  }
+
   return available[Math.floor(Math.random() * available.length)];
 }
 
@@ -77,11 +78,13 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
     () =>
       Array.from({ length: columns }, (_, weekIndex) =>
         data.weeks[weekIndex] ??
-        Array.from({ length: rows }, () => ({ date: "", level: 0 }))
+        Array.from({ length: rows }, () => ({
+          date: "",
+          level: 0,
+        }))
       ),
     [columns, data.weeks, rows]
   );
-
   const [isMobile, setIsMobile] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
@@ -95,67 +98,83 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
   const [failOrigin, setFailOrigin] = useState<Cell | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [desktopCellSize, setDesktopCellSize] = useState<number | null>(null);
-
   const boardRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<HTMLDivElement | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const prevScoreRef = useRef(0);
+  const queuedDirectionRef = useRef<Cell>({ x: 1, y: 0 });
+  const foodRef = useRef<Cell | null>(null);
+  const columnsRef = useRef(columns);
+  const intervalRef = useRef<number | null>(null);
+  const stepRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const update = () => setPrefersReducedMotion(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updateMotionPreference = () => {
+      setPrefersReducedMotion(mediaQuery.matches);
+    };
+
+    updateMotionPreference();
+    mediaQuery.addEventListener("change", updateMotionPreference);
+
+    return () => mediaQuery.removeEventListener("change", updateMotionPreference);
   }, []);
 
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
-    const update = () => setIsMobile(mq.matches);
-    update();
-    mq.addEventListener("change", update);
-    return () => mq.removeEventListener("change", update);
+    const mediaQuery = window.matchMedia("(max-width: 767px)");
+    const updateIsMobile = () => {
+      setIsMobile(mediaQuery.matches);
+    };
+
+    updateIsMobile();
+    mediaQuery.addEventListener("change", updateIsMobile);
+
+    return () => mediaQuery.removeEventListener("change", updateIsMobile);
   }, []);
 
   useEffect(() => {
-    if (!isMobile) return;
-    const id = window.setTimeout(() => {
+    if (!isMobile) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
       setIsPlaying(false);
       setIsPaused(false);
       setIsFailed(false);
       setFailOrigin(null);
     }, 0);
-    return () => window.clearTimeout(id);
+
+    return () => window.clearTimeout(timeoutId);
   }, [isMobile]);
 
   useEffect(() => {
     const element = mapRef.current;
-    if (!element || isMobile) return;
-    const remSize =
-      Number.parseFloat(getComputedStyle(document.documentElement).fontSize) ||
-      16;
+
+    if (!element || isMobile) {
+      return;
+    }
+
+    const remSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
     const labelWidth = 2.25 * remSize;
     const gapWidth = 0.24 * remSize;
     const minCellSize = 0.72 * remSize;
+    const safetyPadding = 2;
 
     const updateCellSize = () => {
-      const available =
-        element.clientWidth - labelWidth - gapWidth * columns - 2;
-      setDesktopCellSize(Math.max(minCellSize, available / columns));
+      const availableWidth = element.clientWidth - labelWidth - gapWidth * columns - safetyPadding;
+      const nextSize = Math.max(minCellSize, availableWidth / columns);
+      setDesktopCellSize(nextSize);
       element.scrollLeft = 0;
     };
 
     updateCellSize();
+
     const observer = new ResizeObserver(updateCellSize);
     observer.observe(element);
+
     return () => observer.disconnect();
   }, [columns, isMobile]);
-
-  useEffect(() => {
-    document.body.classList.toggle("snake-focus-mode", isPlaying);
-    return () => document.body.classList.remove("snake-focus-mode");
-  }, [isPlaying]);
 
   const snakeSet = useMemo(
     () => new Set(snake.map((cell) => cellKey(cell))),
@@ -163,21 +182,34 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
   );
 
   useEffect(() => {
-    const id = window.setTimeout(() => {
+    const timeoutId = window.setTimeout(() => {
       const stored = window.localStorage.getItem("pixelsnake-top-score");
-      if (stored) setTopScore(Number.parseInt(stored, 10) || 0);
+      if (stored) {
+        setTopScore(Number.parseInt(stored, 10) || 0);
+      }
     }, 0);
-    return () => window.clearTimeout(id);
+
+    return () => window.clearTimeout(timeoutId);
   }, []);
 
+  useEffect(() => { queuedDirectionRef.current = queuedDirection; }, [queuedDirection]);
+  useEffect(() => { foodRef.current = food; }, [food]);
+  useEffect(() => { columnsRef.current = columns; }, [columns]);
+
   useEffect(() => {
-    if (!isPlaying) return;
-    const interval = window.setInterval(() => {
+    if (!isPlaying) {
+      stepRef.current = null;
+      if (intervalRef.current) window.clearInterval(intervalRef.current);
+      return;
+    }
+
+    const step = () => {
       setSnake((currentSnake) => {
         if (currentSnake.length === 0) return currentSnake;
-        const nextDir = queuedDirection;
+        const nextDir = queuedDirectionRef.current;
+        const cols = columnsRef.current;
         const head = currentSnake[0];
-        const nextHead = getWrappedHead(head, nextDir, columns, rows);
+        const nextHead = getWrappedHead(head, nextDir, cols, rows);
         const bodyWithoutTail = currentSnake.slice(0, -1);
         if (bodyWithoutTail.some((s) => cellsEqual(s, nextHead))) {
           setIsPlaying(false);
@@ -187,70 +219,104 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
           return currentSnake;
         }
         setDirection(nextDir);
-        if (food && cellsEqual(nextHead, food)) {
+        if (foodRef.current && cellsEqual(nextHead, foodRef.current)) {
           const grown = [nextHead, ...currentSnake];
           const occupied = new Set(grown.map((c) => cellKey(c)));
           setScore((s) => {
             const next = s + 1;
             setTopScore((t) => {
               const nextTop = Math.max(t, next);
-              window.localStorage.setItem(
-                "pixelsnake-top-score",
-                String(nextTop)
-              );
+              window.localStorage.setItem("pixelsnake-top-score", String(nextTop));
               return nextTop;
             });
             return next;
           });
-          setFood(getRandomOpenCell(columns, rows, occupied));
+          setFood(getRandomOpenCell(cols, rows, occupied));
           return grown;
         }
         return [nextHead, ...currentSnake.slice(0, -1)];
       });
-    }, TICK_MS);
-    return () => window.clearInterval(interval);
-  }, [columns, food, isPlaying, queuedDirection, rows]);
+    };
+
+    stepRef.current = step;
+    intervalRef.current = window.setInterval(step, TICK_MS);
+
+    return () => {
+      if (intervalRef.current) window.clearInterval(intervalRef.current);
+    };
+  }, [isPlaying, rows]);
 
   useEffect(() => {
-    if (!isPlaying) return;
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        e.preventDefault();
+    if (!isPlaying) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
         setIsPlaying(false);
         setIsPaused(true);
         return;
       }
-      const next =
-        e.key === "ArrowUp" || e.key.toLowerCase() === "w"
+
+      const nextDirection =
+        event.key === "ArrowUp" || event.key.toLowerCase() === "w"
           ? { x: 0, y: -1 }
-          : e.key === "ArrowDown" || e.key.toLowerCase() === "s"
+          : event.key === "ArrowDown" || event.key.toLowerCase() === "s"
             ? { x: 0, y: 1 }
-            : e.key === "ArrowLeft" || e.key.toLowerCase() === "a"
+            : event.key === "ArrowLeft" || event.key.toLowerCase() === "a"
               ? { x: -1, y: 0 }
-              : e.key === "ArrowRight" || e.key.toLowerCase() === "d"
+              : event.key === "ArrowRight" || event.key.toLowerCase() === "d"
                 ? { x: 1, y: 0 }
                 : null;
-      if (!next) return;
-      e.preventDefault();
-      if (next.x === -direction.x && next.y === -direction.y) return;
-      setQueuedDirection(next);
+
+      if (!nextDirection) {
+        return;
+      }
+
+      event.preventDefault();
+
+      if (
+        nextDirection.x === -direction.x &&
+        nextDirection.y === -direction.y
+      ) {
+        return;
+      }
+
+      queuedDirectionRef.current = nextDirection;
+      setQueuedDirection(nextDirection);
+      stepRef.current?.();
+      if (intervalRef.current) window.clearInterval(intervalRef.current);
+      if (stepRef.current) intervalRef.current = window.setInterval(stepRef.current, TICK_MS);
     };
+
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [direction, isPlaying]);
 
   useEffect(() => {
-    if (isPlaying) boardRef.current?.focus();
+    if (isPlaying) {
+      boardRef.current?.focus();
+    }
   }, [isPlaying]);
 
   useEffect(() => {
-    if (!isPlaying) return;
-    const handlePointerDown = (e: MouseEvent) => {
-      if (!mapRef.current?.contains(e.target as Node)) {
+    if (!isPlaying) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      const map = mapRef.current;
+      if (!map) {
+        return;
+      }
+
+      if (!map.contains(event.target as Node)) {
         setIsPlaying(false);
         setIsPaused(true);
       }
     };
+
     window.addEventListener("pointerdown", handlePointerDown);
     return () => window.removeEventListener("pointerdown", handlePointerDown);
   }, [isPlaying]);
@@ -271,7 +337,8 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
   const playEat = () => {
     const ctx = audioCtxRef.current;
     if (!ctx) return;
-    [440, 660].forEach((freq, i) => {
+    const notes = [440, 660];
+    notes.forEach((freq, i) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "square";
@@ -279,10 +346,7 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
       gain.connect(ctx.destination);
       osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.07);
       gain.gain.setValueAtTime(0.035, ctx.currentTime + i * 0.07);
-      gain.gain.exponentialRampToValueAtTime(
-        0.0001,
-        ctx.currentTime + i * 0.07 + 0.09
-      );
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i * 0.07 + 0.09);
       osc.start(ctx.currentTime + i * 0.07);
       osc.stop(ctx.currentTime + i * 0.07 + 0.12);
     });
@@ -292,10 +356,10 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
     const ctx = audioCtxRef.current;
     if (!ctx) return;
     [
-      { freq: 196, start: 0, dur: 0.38 },
+      { freq: 196, start: 0,    dur: 0.38 },
       { freq: 156, start: 0.32, dur: 0.38 },
       { freq: 124, start: 0.62, dur: 0.38 },
-      { freq: 87, start: 0.92, dur: 0.55 },
+      { freq: 87,  start: 0.92, dur: 0.55 },
     ].forEach(({ freq, start, dur }) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -303,29 +367,27 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.frequency.setValueAtTime(freq * 1.04, ctx.currentTime + start);
-      osc.frequency.exponentialRampToValueAtTime(
-        freq * 0.94,
-        ctx.currentTime + start + dur
-      );
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.94, ctx.currentTime + start + dur);
       gain.gain.setValueAtTime(0.0001, ctx.currentTime + start);
       gain.gain.linearRampToValueAtTime(0.055, ctx.currentTime + start + 0.04);
-      gain.gain.exponentialRampToValueAtTime(
-        0.0001,
-        ctx.currentTime + start + dur
-      );
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + start + dur);
       osc.start(ctx.currentTime + start);
       osc.stop(ctx.currentTime + start + dur + 0.05);
     });
   };
 
   useEffect(() => {
-    if (score > prevScoreRef.current) playEat();
+    if (score > prevScoreRef.current) {
+      playEat();
+    }
     prevScoreRef.current = score;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [score]);
 
   useEffect(() => {
-    if (isFailed) playGameOver();
+    if (isFailed) {
+      playGameOver();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFailed]);
 
@@ -336,9 +398,11 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
       { x: (origin.x - 1 + columns) % columns, y: origin.y },
       { x: (origin.x - 2 + columns) % columns, y: origin.y },
     ];
-    const occupied = new Set(initialSnake.map((c) => cellKey(c)));
+    const occupied = new Set(initialSnake.map((cell) => cellKey(cell)));
+
     setSnake(initialSnake);
     setDirection({ x: 1, y: 0 });
+    queuedDirectionRef.current = { x: 1, y: 0 };
     setQueuedDirection({ x: 1, y: 0 });
     setFood(getRandomOpenCell(columns, rows, occupied));
     setScore(0);
@@ -349,40 +413,59 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
   };
 
   const resumeGame = () => {
-    if (snake.length === 0 || isFailed) return;
+    if (snake.length === 0 || isFailed) {
+      return;
+    }
+
     setIsPaused(false);
     setIsPlaying(true);
   };
 
-  const handleTouchStart = (e: React.TouchEvent<HTMLDivElement>) => {
-    const touch = e.touches[0];
+  const handleTouchStart = (event: React.TouchEvent<HTMLDivElement>) => {
+    const touch = event.touches[0];
     touchStartRef.current = { x: touch.clientX, y: touch.clientY };
   };
 
-  const handleTouchEnd = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!touchStartRef.current || !isPlaying) return;
-    const touch = e.changedTouches[0];
-    const dx = touch.clientX - touchStartRef.current.x;
-    const dy = touch.clientY - touchStartRef.current.y;
+  const handleTouchEnd = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (!touchStartRef.current || !isPlaying) {
+      return;
+    }
+
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - touchStartRef.current.x;
+    const deltaY = touch.clientY - touchStartRef.current.y;
     touchStartRef.current = null;
-    if (Math.abs(dx) < 20 && Math.abs(dy) < 20) return;
-    const next =
-      Math.abs(dx) > Math.abs(dy)
-        ? dx > 0
+
+    if (Math.abs(deltaX) < 20 && Math.abs(deltaY) < 20) {
+      return;
+    }
+
+    const nextDirection =
+      Math.abs(deltaX) > Math.abs(deltaY)
+        ? deltaX > 0
           ? { x: 1, y: 0 }
           : { x: -1, y: 0 }
-        : dy > 0
+        : deltaY > 0
           ? { x: 0, y: 1 }
           : { x: 0, y: -1 };
-    if (next.x === -direction.x && next.y === -direction.y) return;
-    setQueuedDirection(next);
+
+    if (nextDirection.x === -direction.x && nextDirection.y === -direction.y) {
+      return;
+    }
+
+    queuedDirectionRef.current = nextDirection;
+    setQueuedDirection(nextDirection);
+    stepRef.current?.();
+    if (intervalRef.current) window.clearInterval(intervalRef.current);
+    if (stepRef.current) intervalRef.current = window.setInterval(stepRef.current, TICK_MS);
+  };
+
+  const handleMapPointerDown = (event: ReactMouseEvent<HTMLDivElement>) => {
+    event.stopPropagation();
   };
 
   return (
-    <section
-      className="contribution-snake-section"
-      aria-label="GitHub contribution activity"
-    >
+    <section className="contribution-snake-section" aria-label="GitHub contribution activity">
       <div className="contribution-snake-header">
         <div className="contribution-snake-title-group">
           <div className="contribution-snake-title">
@@ -405,30 +488,22 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
         </div>
       </div>
 
-      {isPlaying ? (
-        <div className="snake-focus-overlay" aria-hidden="true" />
-      ) : null}
+      {isPlaying ? <div className="snake-focus-overlay" aria-hidden="true" /> : null}
 
       <div
         ref={mapRef}
         className={`contribution-map ${isPlaying ? "is-focus" : ""}`}
         style={{
           ["--contribution-columns" as string]: String(columns),
-          ...(desktopCellSize
-            ? {
-                ["--contribution-cell-size" as string]: `${desktopCellSize}px`,
-              }
-            : {}),
+          ...(desktopCellSize ? { ["--contribution-cell-size" as string]: `${desktopCellSize}px` } : {}),
         }}
-        onMouseDown={(e) => e.stopPropagation()}
+        onMouseDown={handleMapPointerDown}
       >
         <div className="contribution-months" aria-hidden="true">
           {data.months.map((month) => (
             <span
               key={`${month.label}-${month.start}`}
-              style={{
-                gridColumn: `${month.start + 1} / span ${month.span}`,
-              }}
+              style={{ gridColumn: `${month.start + 1} / span ${month.span}` }}
             >
               {month.label}
             </span>
@@ -457,8 +532,7 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
                     const isSnakeCell = snakeSet.has(cellKey(cell));
                     const isFoodCell = food ? cellsEqual(cell, food) : false;
                     const failDistance = failOrigin
-                      ? Math.abs(cell.x - failOrigin.x) +
-                        Math.abs(cell.y - failOrigin.y)
+                      ? Math.abs(cell.x - failOrigin.x) + Math.abs(cell.y - failOrigin.y)
                       : 0;
 
                     return (
@@ -468,28 +542,30 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
                         className={`contribution-snake-cell level-${day.level} ${isSnakeCell ? "is-snake" : ""} ${isFoodCell ? "is-food" : ""}`}
                         style={
                           isFailed && !prefersReducedMotion
-                            ? ({
-                                ["--fail-delay" as string]: `${failDistance * 18}ms`,
-                              } as CSSProperties)
+                            ? ({ ["--fail-delay" as string]: `${failDistance * 18}ms` } as CSSProperties)
                             : undefined
                         }
                         disabled={isMobile}
                         onClick={() => {
-                          if (isMobile) return;
+                          if (isMobile) {
+                            return;
+                          }
+
                           if (!isPlaying) {
                             if (isPaused && !isFailed && snake.length > 0) {
                               resumeGame();
                               return;
                             }
+
                             startGame(cell);
                           }
                         }}
                         aria-label={
                           isMobile
-                            ? day.date || "Contribution cell"
+                            ? `${day.date || "Contribution cell"}`
                             : isPlaying
-                              ? `Snake cell ${weekIndex + 1}, ${dayIndex + 1}`
-                              : day.date || "Contribution cell"
+                            ? `Snake board cell ${weekIndex + 1}, ${dayIndex + 1}`
+                            : `${day.date || "Contribution cell"}`
                         }
                       />
                     );

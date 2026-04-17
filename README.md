@@ -1,60 +1,65 @@
 # pixelsnake
 
-A playable GitHub contribution graph widget. Clone it, deploy it, embed it on any website with a single `<iframe>`. No autoplay, no GIFs — a real snake game on your real commit history.
+A playable snake game built on your GitHub contribution graph. Click any cell to start — arrows or WASD to steer, retro chip audio, ripple animation on game over.
 
-## Quick start
+**[Live demo →](https://kishore.design)** (scroll to the footer)
 
-```bash
-git clone https://github.com/yourusername/pixelsnake
-cd pixelsnake
-npm install
-cp .env.example .env.local   # set DEMO_GITHUB_USER
-npm run dev
+---
+
+## Add to your existing site
+
+Pixelsnake is a React component you drop into your existing Next.js project. No separate deployment, no iframe.
+
+### 1. Copy the files
+
+Copy these two files into your project:
+
+```
+src/components/contribution-snake.tsx  →  your component
+src/lib/github-contributions.ts        →  your data fetching util
 ```
 
-Then open `http://localhost:3000/?user=yourusername`.
+Also merge the snake CSS from `src/app/globals.css` — everything from the `/* ─── Snake / contribution grid ───── */` section down.
 
-## Deploy
+### 2. Fetch data server-side
 
-Each person hosts their own instance — no shared rate limits, no dependency on anyone else's uptime.
+In a Server Component (e.g. your page or layout):
 
-[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/yourusername/pixelsnake&project-name=pixelsnake&repository-name=pixelsnake&env=DEMO_GITHUB_USER&envDescription=GitHub%20username%20shown%20when%20no%20user%20param%20is%20provided)
+```tsx
+import { ContributionSnake } from "@/components/contribution-snake";
+import { getGithubContributions } from "@/lib/github-contributions";
 
-[![Deploy to Netlify](https://www.netlify.com/img/deploy/button.svg)](https://app.netlify.com/start/deploy?repository=https://github.com/yourusername/pixelsnake)
+const data = await getGithubContributions("yourusername");
 
-## Embed
-
-Once deployed, drop this into any webpage:
-
-```html
-<iframe
-  src="https://your-deployment.vercel.app/?user=yourusername"
-  width="100%"
-  height="200"
-  frameborder="0"
-  scrolling="no"
-  title="GitHub contribution snake"
-></iframe>
+return <ContributionSnake data={data} />;
 ```
 
-### URL parameters
+Data is fetched server-side and revalidates every hour — no client-side API calls, no rate limit issues.
 
-| Parameter | Values | Description |
-|-----------|--------|-------------|
-| `user` | any GitHub username | Whose contributions to load — falls back to `DEMO_GITHUB_USER` if omitted |
-| `theme` | `light` · `dark` | Force a color theme — defaults to the visitor's system preference |
+### 3. Done
+
+The widget is fully self-contained. No environment variables required for basic use.
+
+---
 
 ## How to play
 
-Click any cell on the contribution grid to start. Arrow keys or WASD to steer. ESC to pause.
+Click any cell on the contribution grid to start. The snake spawns at that cell.
+
+| Control | Action |
+|---------|--------|
+| `↑ ↓ ← →` or `W A S D` | Steer |
+| `ESC` | Pause |
+| Click any cell | Start / restart |
+| Swipe | Steer on mobile |
+
+---
 
 ## Customization
 
-Everything is meant to be changed in code.
-
 ### Speed
 
-Open [`src/components/contribution-snake.tsx`](src/components/contribution-snake.tsx) and edit the constant at the top:
+Open `contribution-snake.tsx` and change the constant at the top:
 
 ```ts
 const TICK_MS = 120; // lower = faster
@@ -62,37 +67,31 @@ const TICK_MS = 120; // lower = faster
 
 ### Colors
 
-All colors are CSS custom properties in [`src/app/globals.css`](src/app/globals.css). The `:root` block controls the light theme, `[data-theme="dark"]` controls the dark theme.
-
-Key variables:
+All colors are CSS custom properties. The `:root` block is light mode, `[data-theme="dark"]` is dark mode.
 
 | Variable | What it controls |
 |----------|-----------------|
-| `--color-contrib-0` → `--color-contrib-5` | Contribution cell shades (inactive state) |
-| `--color-contrib-active-0` → `--color-contrib-active-5` | Contribution cell shades (while playing) |
-| `--color-snake` | Snake body color |
-| `--color-snake-food` | Food cell color |
-| `--color-snake-active` | Snake body color while in active/playing state |
-| `--color-snake-food-active` | Food color while in active/playing state |
-| `--color-danger-wave` | Cell color during the game-over wave animation |
-| `--color-danger-text` | "Game over" text color |
+| `--color-contrib-0` → `5` | Contribution cell shades (idle) |
+| `--color-contrib-active-0` → `5` | Contribution cell shades (while playing) |
+| `--color-snake` | Snake body |
+| `--color-snake-food` | Food cell |
+| `--color-snake-active` | Snake body while playing |
+| `--color-snake-food-active` | Food while playing |
+| `--color-danger-wave` | Game-over wave color |
+| `--color-danger-text` | "Game over" text |
 
 ### Cell size
 
-Cell size is calculated automatically to fill the available width. To force a fixed size, override the CSS variable in `globals.css`:
+Cell size auto-fits available width. To force a fixed size:
 
 ```css
 .contribution-map {
-  --contribution-cell-size: 12px; /* override auto-sizing */
+  --contribution-cell-size: 12px;
 }
 ```
 
-### Environment variables
-
-| Variable | Description |
-|----------|-------------|
-| `DEMO_GITHUB_USER` | GitHub username to show when the widget is visited without a `?user=` param |
+---
 
 ## Tech
 
-Next.js · React · TypeScript · Tailwind CSS v4
+React · Next.js · TypeScript · Tailwind CSS v4
