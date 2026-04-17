@@ -4,6 +4,11 @@ import type { CSSProperties } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { ContributionCalendarData } from "@/lib/github-contributions";
 
+// ─── Customization ───────────────────────────────────────────────────────────
+// Snake speed in milliseconds per tick. Lower = faster. Default: 120.
+const TICK_MS = 120;
+// ─────────────────────────────────────────────────────────────────────────────
+
 type Cell = { x: number; y: number };
 
 type ContributionSnakeProps = {
@@ -202,7 +207,7 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
         }
         return [nextHead, ...currentSnake.slice(0, -1)];
       });
-    }, 120);
+    }, TICK_MS);
     return () => window.clearInterval(interval);
   }, [columns, food, isPlaying, queuedDirection, rows]);
 

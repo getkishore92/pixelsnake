@@ -162,7 +162,7 @@ body {
 
 /* ─── Embed shell ────────────────────────────────────────────── */
 
-.embed-shell {
+.widget-shell {
   padding: 1.25rem 1rem;
   min-height: 100dvh;
 }
