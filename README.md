@@ -1,10 +1,6 @@
 # pixelsnake
 
 <p align="center">
-  <img src="pixelsnake-logo.png" alt="pixelsnake logo" width="180" />
-</p>
-
-<p align="center">
   <img src="thumbnail.png" alt="pixelsnake screenshot" width="640" />
 </p>
 
@@ -13,6 +9,10 @@ A playable snake game built on your GitHub contribution graph. Click any cell to
 **[Live demo →](https://kishore.design)** (scroll to the footer)
 
 ---
+<p align="left">
+  <img src="pixelsnake-logo.png" alt="pixelsnake logo" width="180" />
+</p>
+
 
 ## Add to your existing site
 
