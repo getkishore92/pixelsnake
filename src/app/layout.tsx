@@ -12,7 +12,7 @@ const spaceMono = Space_Mono({
 export const metadata: Metadata = {
   title: "pixelsnake",
   description:
-    "A playable GitHub contribution graph widget you can embed on any website.",
+    "A playable GitHub contribution graph widget you can drop into a Next.js app.",
 };
 
 export default function RootLayout({
