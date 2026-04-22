@@ -112,6 +112,9 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
   const [topScore, setTopScore] = useState(0);
   const [isFailed, setIsFailed] = useState(false);
   const [failOrigin, setFailOrigin] = useState<Cell | null>(null);
+  const [isStarting, setIsStarting] = useState(false);
+  const [countdownLabel, setCountdownLabel] = useState<"3" | "2" | "1" | "GO" | null>(null);
+  const [showControlsHint, setShowControlsHint] = useState(false);
   const [gamePixels, setGamePixels] = useState<Set<string>>(new Set());
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [desktopCellSize, setDesktopCellSize] = useState<number | null>(null);
@@ -120,6 +123,7 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const prevScoreRef = useRef(0);
+  const countdownStepTimeoutRef = useRef<number | null>(null);
   const queuedDirectionRef = useRef<Cell>({ x: 1, y: 0 });
   const foodRef = useRef<Cell | null>(null);
   const columnsRef = useRef(columns);
@@ -207,6 +211,14 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (countdownStepTimeoutRef.current) {
+        window.clearTimeout(countdownStepTimeoutRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => { queuedDirectionRef.current = queuedDirection; }, [queuedDirection]);
@@ -409,8 +421,7 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFailed]);
 
-  const startGame = (origin: Cell) => {
-    unlockAudio();
+  const beginGame = (origin: Cell) => {
     const initialSnake = [
       origin,
       { x: (origin.x - 1 + columns) % columns, y: origin.y },
@@ -430,7 +441,43 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
     setIsFailed(false);
     setIsPaused(false);
     setFailOrigin(null);
+    setIsStarting(false);
+    setCountdownLabel(null);
+    setShowControlsHint(false);
     setIsPlaying(true);
+  };
+
+  const startGame = (origin: Cell) => {
+    unlockAudio();
+
+    if (countdownStepTimeoutRef.current) {
+      window.clearTimeout(countdownStepTimeoutRef.current);
+    }
+
+    setShowControlsHint(true);
+    setIsStarting(true);
+    setCountdownLabel("3");
+    setIsPlaying(false);
+    setIsPaused(false);
+    setIsFailed(false);
+    setFailOrigin(null);
+
+    const runCountdown = (label: "3" | "2" | "1" | "GO") => {
+      if (label === "GO") {
+        countdownStepTimeoutRef.current = window.setTimeout(() => {
+          beginGame(origin);
+        }, 650);
+        return;
+      }
+
+      const nextLabel = label === "3" ? "2" : label === "2" ? "1" : "GO";
+      countdownStepTimeoutRef.current = window.setTimeout(() => {
+        setCountdownLabel(nextLabel);
+        runCountdown(nextLabel);
+      }, 720);
+    };
+
+    runCountdown("3");
   };
 
   const resumeGame = () => {
@@ -574,7 +621,7 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
                             return;
                           }
 
-                          if (!isPlaying) {
+                          if (!isPlaying && !isStarting) {
                             if (isPaused && !isFailed && snake.length > 0) {
                               resumeGame();
                               return;
@@ -600,9 +647,28 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
         </div>
 
         {isFailed ? (
-          <div className="contribution-game-over">
+          <div className="contribution-game-over contribution-board-callout">
             <strong>GAME OVER</strong>
             <span>press any square to restart</span>
+          </div>
+        ) : null}
+
+        {(isStarting || isPlaying) && showControlsHint ? (
+          <div
+            className={`contribution-board-callout ${isStarting ? "contribution-start-countdown" : "contribution-controls-hint"}`}
+            aria-hidden="true"
+          >
+            {isStarting && countdownLabel ? (
+              <>
+                <strong>USE ARROW KEYS</strong>
+                <span>{countdownLabel === "GO" ? "GO!!" : `STARTING IN ${countdownLabel}`}</span>
+              </>
+            ) : (
+              <>
+                <strong>USE ARROW KEYS</strong>
+                <span>COLLECT PIXELS. DON&apos;T CRASH.</span>
+              </>
+            )}
           </div>
         ) : null}
       </div>

@@ -412,7 +412,7 @@ body {
   animation-delay: var(--fail-delay, 0ms);
 }
 
-.contribution-game-over {
+.contribution-board-callout {
   position: absolute;
   inset: 2.4rem 0 0 0;
   display: flex;
@@ -420,37 +420,80 @@ body {
   align-items: center;
   justify-content: center;
   gap: 0.35rem;
+  padding: 1rem 1.15rem 1.1rem;
   pointer-events: none;
   z-index: 40;
 }
 
-.contribution-game-over::before {
+.contribution-game-over {
+  color: var(--color-danger-text);
+}
+
+.contribution-controls-hint {
+  inset: 2.4rem 0 0 0;
+  gap: 0.35rem;
+  color: #334155;
+}
+
+.contribution-start-countdown {
+  inset: 1.25rem 0 0 0;
+}
+
+.contribution-board-callout::before {
   content: "";
   position: absolute;
   width: min(24rem, calc(100% - 3rem));
   height: 5.5rem;
   border-radius: var(--radius-lg);
-  background: var(--color-gameover-surface);
+  background: rgba(255, 255, 255, 0.8);
   border: var(--border-width) solid var(--color-gameover-border);
   box-shadow: var(--shadow-overlay);
   z-index: -1;
 }
 
-.contribution-game-over strong,
-.contribution-game-over span {
+.contribution-controls-hint::before {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: color-mix(in srgb, #334155 18%, transparent);
+  width: min(24rem, calc(100% - 3rem));
+  height: 5.5rem;
+}
+
+.contribution-start-countdown::before {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: color-mix(in srgb, #334155 18%, transparent);
+  width: min(24rem, calc(100% - 3rem));
+  height: 5.5rem;
+}
+
+.contribution-board-callout strong,
+.contribution-board-callout span {
   font-family: var(--font-ui), monospace;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  color: var(--color-danger-text);
   text-align: center;
 }
 
 .contribution-game-over strong {
   font-size: 1.0625rem;
+  color: var(--color-danger-text);
 }
 
 .contribution-game-over span {
   font-size: var(--text-sm);
+  color: var(--color-danger-text);
+}
+
+.contribution-controls-hint strong {
+  font-size: 1.0625rem;
+  line-height: 1.05;
+  color: #0f172a;
+}
+
+.contribution-controls-hint span {
+  font-size: var(--text-sm);
+  line-height: 1.05;
+  max-width: none;
+  color: #64748b;
 }
 
 .snake-focus-overlay {
