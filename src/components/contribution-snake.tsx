@@ -655,17 +655,19 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
 
         {(isStarting || isPlaying) && showControlsHint ? (
           <div
+            key={isStarting ? `countdown-${countdownLabel ?? "idle"}` : "controls-hint"}
             className={`contribution-board-callout ${isStarting ? "contribution-start-countdown" : "contribution-controls-hint"}`}
+            data-countdown-label={isStarting && countdownLabel ? countdownLabel : undefined}
             aria-hidden="true"
           >
             {isStarting && countdownLabel ? (
               <>
-                <strong>USE ARROW KEYS</strong>
+                <strong>USE AWSD OR ARROW KEYS TO PLAY</strong>
                 <span>{countdownLabel === "GO" ? "GO!!" : `STARTING IN ${countdownLabel}`}</span>
               </>
             ) : (
               <>
-                <strong>USE ARROW KEYS</strong>
+                <strong>USE AWSD OR ARROW KEYS TO PLAY</strong>
                 <span>COLLECT PIXELS. DON&apos;T CRASH.</span>
               </>
             )}
