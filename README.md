@@ -4,55 +4,89 @@
   <img src="thumbnail.png" alt="pixelsnake screenshot" width="640" />
 </p>
 
-A playable snake game built on your GitHub contribution graph. Click any cell to start — arrows or WASD to steer, retro chip audio, ripple animation on game over.
+A playable snake game built on your GitHub contribution graph. Click any cell to start, steer with arrow keys or WASD, and ship a weirdly delightful footer widget without an iframe.
 
 **[Live demo →](https://kishore.design)** (scroll to the footer)
 
 ---
-<p align="left">
-  <img src="pixelsnake-logo.png" alt="pixelsnake logo" width="400" />
-</p>
 
+## What this repo is
 
-## Add to your existing site
+This repo is structured in two layers:
 
-Pixelsnake is a React component you drop into your existing Next.js project. No separate deployment, no iframe.
+- `src/widget/` is the reusable part you can copy into your own project.
+- `src/app/` is a tiny demo app that consumes the widget like a normal user would.
 
-### 1. Copy the files
+The goal is not “install a package from npm” yet. The goal is “copy one folder into your site and have it work.”
 
-Copy these two files into your project:
+---
 
-```
-src/components/contribution-snake.tsx  →  your component
-src/lib/github-contributions.ts        →  your data fetching util
-```
+## Quick start for a Next.js app
 
-Also merge the snake CSS from `src/app/globals.css` — everything from the `/* ─── Snake / contribution grid ───── */` section down.
+### 1. Copy the widget folder
 
-### 2. Fetch data server-side
+Copy the entire `src/widget/` folder into your project.
 
-In a Server Component (e.g. your page or layout):
+It contains:
+
+- `ContributionSnake.tsx`
+- `ContributionSnake.module.css`
+- `github-contributions.ts`
+- `types.ts`
+- `index.ts`
+
+No global CSS merge is required. No font setup is required. No Tailwind tokens are required.
+
+### 2. Render it in a Server Component
 
 ```tsx
-import { ContributionSnake } from "@/components/contribution-snake";
-import { getGithubContributions } from "@/lib/github-contributions";
+import { ContributionSnake, getGithubContributions } from "@/widget";
 
-const data = await getGithubContributions("yourusername");
+export default async function Page() {
+  const data = await getGithubContributions("yourusername");
 
-return <ContributionSnake data={data} />;
+  return <ContributionSnake data={data} />;
+}
 ```
 
-Data is fetched server-side and revalidates every hour — no client-side API calls, no rate limit issues.
+If your app does not use the `@/` alias, switch that import to the relative path where you copied the folder.
 
 ### 3. Done
 
-The widget is fully self-contained. No environment variables required for basic use.
+The component imports its own CSS Module, so the widget styling comes along with the component automatically.
+
+---
+
+## Public API
+
+### `ContributionSnake`
+
+```tsx
+type ContributionSnakeProps = {
+  data: ContributionCalendarData;
+  className?: string;
+  tickMs?: number;
+  showHeader?: boolean;
+  title?: string;
+};
+```
+
+Notes:
+
+- `data` is required.
+- `tickMs` controls snake speed. Lower is faster. Default is `120`.
+- `showHeader={false}` hides the built-in contribution header if you want to wrap it in your own card.
+- `title` lets you override the default heading text.
+
+### `getGithubContributions(username)`
+
+This helper fetches GitHub contribution HTML on the server, parses it, and returns the widget data shape.
+
+It is useful for Next.js server rendering, but it is optional. If you already have contribution data, you can skip the helper and pass `data` directly to the component.
 
 ---
 
 ## How to play
-
-Click any cell on the contribution grid to start. The snake spawns at that cell.
 
 | Control | Action |
 |---------|--------|
@@ -67,39 +101,80 @@ Click any cell on the contribution grid to start. The snake spawns at that cell.
 
 ### Speed
 
-Open `contribution-snake.tsx` and change the constant at the top:
-
-```ts
-const TICK_MS = 120; // lower = faster
+```tsx
+<ContributionSnake data={data} tickMs={95} />
 ```
 
-### Colors
+### Hide the built-in header
 
-All colors are CSS custom properties. The `:root` block is light mode, `[data-theme="dark"]` is dark mode.
+```tsx
+<ContributionSnake data={data} showHeader={false} />
+```
 
-| Variable | What it controls |
-|----------|-----------------|
-| `--color-contrib-0` → `5` | Contribution cell shades (idle) |
-| `--color-contrib-active-0` → `5` | Contribution cell shades (while playing) |
-| `--color-snake` | Snake body |
-| `--color-snake-food` | Food cell |
-| `--color-snake-active` | Snake body while playing |
-| `--color-snake-food-active` | Food while playing |
-| `--color-danger-wave` | Game-over wave color |
-| `--color-danger-text` | "Game over" text |
+### Override the title
 
-### Cell size
+```tsx
+<ContributionSnake data={data} title="Play my GitHub year" />
+```
 
-Cell size auto-fits available width. To force a fixed size:
+### Theme
 
-```css
-.contribution-map {
-  --contribution-cell-size: 12px;
-}
+The widget has its own default colors and supports light/dark mode automatically.
+
+You can also force theme from your page shell with:
+
+```html
+<html data-theme="dark">
+```
+
+or:
+
+```html
+<html data-theme="light">
+```
+
+### Styling
+
+The widget is intentionally self-contained inside `ContributionSnake.module.css`.
+
+If you want to restyle it:
+
+- tweak the CSS custom properties near the top of `ContributionSnake.module.css`
+- or wrap the component with your own container and use `className`
+
+---
+
+## Non-Next usage
+
+The `ContributionSnake` component itself is plain React plus a CSS Module.
+
+The only Next-specific piece is `getGithubContributions`, because it uses Next server `fetch` caching semantics. If you are not using Next.js:
+
+- keep `ContributionSnake.tsx`
+- keep `ContributionSnake.module.css`
+- keep `types.ts`
+- provide your own `ContributionCalendarData`
+
+---
+
+## Caveats
+
+- The default GitHub helper scrapes GitHub’s contribution HTML, so it may need updates if GitHub changes that markup.
+- The widget is desktop-first. Mobile is supported, but the interaction is still best on desktop.
+- Audio is generated with the Web Audio API and unlocks on first interaction.
+
+---
+
+## Repo structure
+
+```txt
+src/
+  app/        # demo app
+  widget/     # cloneable widget files
 ```
 
 ---
 
 ## Tech
 
-React · Next.js · TypeScript · Tailwind CSS v4
+React · Next.js · TypeScript · CSS Modules

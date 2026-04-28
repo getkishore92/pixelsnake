@@ -1,0 +1,617 @@
+.root {
+  --neutral-50: #fafafa;
+  --neutral-100: #f4f4f5;
+  --neutral-200: #e4e4e7;
+  --neutral-300: #d4d4d8;
+  --neutral-400: #a1a1aa;
+  --neutral-500: #71717a;
+  --neutral-600: #52525b;
+  --neutral-700: #3f3f46;
+  --neutral-800: #27272a;
+  --neutral-900: #18181b;
+  --neutral-950: #09090b;
+
+  --slate-200: #e2e8f0;
+  --slate-300: #cbd5e1;
+  --slate-400: #94a3b8;
+  --slate-500: #64748b;
+  --slate-600: #475569;
+  --slate-700: #334155;
+  --slate-800: #1e293b;
+
+  --green-50: #f0fdf4;
+  --green-200: #bbf7d0;
+  --green-300: #86efac;
+  --green-400: #4ade80;
+  --green-500: #22c55e;
+  --green-600: #16a34a;
+  --green-700: #15803d;
+  --green-800: #166534;
+  --green-950: #052e16;
+
+  --red-500: #ef4444;
+  --red-600: #dc2626;
+  --red-800: #991b1b;
+
+  --color-background: var(--neutral-100);
+  --color-surface: var(--neutral-100);
+  --color-foreground: var(--neutral-950);
+  --color-foreground-secondary: var(--neutral-700);
+  --color-border: var(--neutral-200);
+  --color-focus: color-mix(in srgb, var(--neutral-950) 16%, transparent);
+
+  --font-body: Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-ui: "Space Mono", "SFMono-Regular", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --text-sm: 0.8125rem;
+  --text-md: 0.9375rem;
+
+  --radius-lg: 0.375rem;
+  --border-width: 1px;
+
+  --duration-fast: 140ms;
+  --duration-base: 220ms;
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+
+  --shadow-elevation-2:
+    0 1px 2px color-mix(in srgb, var(--neutral-950) 10%, transparent),
+    0 6px 14px color-mix(in srgb, var(--neutral-950) 6%, transparent);
+  --shadow-elevation-4:
+    0 2px 4px color-mix(in srgb, var(--neutral-950) 12%, transparent),
+    0 12px 28px color-mix(in srgb, var(--neutral-950) 10%, transparent);
+  --shadow-panel: var(--shadow-elevation-2);
+  --shadow-panel-strong: var(--shadow-elevation-4);
+  --shadow-overlay: var(--shadow-elevation-4);
+
+  --color-contrib-0: var(--slate-300);
+  --color-contrib-1: var(--slate-400);
+  --color-contrib-2: var(--slate-500);
+  --color-contrib-3: var(--slate-600);
+  --color-contrib-4: var(--slate-700);
+  --color-contrib-5: var(--slate-800);
+  --color-contrib-active-0: var(--green-200);
+  --color-contrib-active-1: var(--green-300);
+  --color-contrib-active-2: var(--green-400);
+  --color-contrib-active-3: var(--green-500);
+  --color-contrib-active-4: var(--green-600);
+  --color-contrib-active-5: var(--green-700);
+  --color-snake: var(--neutral-950);
+  --color-snake-food: var(--neutral-700);
+  --color-snake-glow: color-mix(in srgb, var(--neutral-50) 4%, transparent);
+  --color-snake-active: var(--green-950);
+  --color-snake-food-active: var(--green-700);
+  --color-snake-glow-active: color-mix(in srgb, var(--green-50) 16%, transparent);
+  --color-danger-wave: var(--red-600);
+  --color-danger-wave-strong: var(--red-800);
+  --color-danger-text: var(--red-500);
+  --color-danger-wave-ring: color-mix(in srgb, var(--red-600) 22%, transparent);
+  --color-danger-wave-ring-strong: color-mix(in srgb, var(--red-800) 14%, transparent);
+  --color-gameover-surface: color-mix(in srgb, var(--neutral-50) 94%, transparent);
+  --color-gameover-border: color-mix(in srgb, var(--neutral-950) 8%, transparent);
+
+  width: 100%;
+  padding-bottom: 0.25rem;
+  position: relative;
+  font-family: var(--font-body);
+  color: var(--color-foreground);
+}
+
+:global([data-theme="dark"]) .root {
+  --color-background: var(--neutral-950);
+  --color-surface: var(--neutral-900);
+  --color-foreground: var(--neutral-50);
+  --color-foreground-secondary: var(--neutral-300);
+  --color-border: var(--neutral-800);
+  --color-focus: color-mix(in srgb, var(--neutral-50) 18%, transparent);
+
+  --color-contrib-0: color-mix(in srgb, var(--slate-700) 90%, var(--neutral-950));
+  --color-contrib-1: color-mix(in srgb, var(--slate-600) 94%, var(--neutral-950));
+  --color-contrib-2: var(--slate-500);
+  --color-contrib-3: var(--slate-400);
+  --color-contrib-4: var(--slate-300);
+  --color-contrib-5: var(--slate-200);
+  --color-contrib-active-0: color-mix(in srgb, var(--green-800) 82%, var(--neutral-950));
+  --color-contrib-active-1: color-mix(in srgb, var(--green-700) 88%, var(--neutral-950));
+  --color-contrib-active-2: var(--green-600);
+  --color-contrib-active-3: var(--green-500);
+  --color-contrib-active-4: var(--green-400);
+  --color-contrib-active-5: var(--green-300);
+  --color-snake: var(--neutral-50);
+  --color-snake-food: var(--neutral-300);
+  --color-snake-active: var(--green-200);
+  --color-snake-food-active: var(--green-400);
+  --color-snake-glow-active: color-mix(in srgb, var(--green-50) 24%, transparent);
+  --color-gameover-surface: color-mix(in srgb, var(--neutral-950) 90%, transparent);
+  --color-gameover-border: color-mix(in srgb, var(--neutral-50) 8%, transparent);
+
+  --shadow-elevation-2:
+    0 1px 2px color-mix(in srgb, var(--neutral-950) 30%, transparent),
+    0 8px 18px color-mix(in srgb, var(--neutral-950) 26%, transparent);
+  --shadow-elevation-4:
+    0 2px 4px color-mix(in srgb, var(--neutral-950) 34%, transparent),
+    0 14px 32px color-mix(in srgb, var(--neutral-950) 28%, transparent);
+}
+
+@media (prefers-color-scheme: dark) {
+  :global(html:not([data-theme])) .root {
+    --color-background: var(--neutral-950);
+    --color-surface: var(--neutral-900);
+    --color-foreground: var(--neutral-50);
+    --color-foreground-secondary: var(--neutral-300);
+    --color-border: var(--neutral-800);
+    --color-focus: color-mix(in srgb, var(--neutral-50) 18%, transparent);
+
+    --color-contrib-0: color-mix(in srgb, var(--slate-700) 90%, var(--neutral-950));
+    --color-contrib-1: color-mix(in srgb, var(--slate-600) 94%, var(--neutral-950));
+    --color-contrib-2: var(--slate-500);
+    --color-contrib-3: var(--slate-400);
+    --color-contrib-4: var(--slate-300);
+    --color-contrib-5: var(--slate-200);
+    --color-contrib-active-0: color-mix(in srgb, var(--green-800) 82%, var(--neutral-950));
+    --color-contrib-active-1: color-mix(in srgb, var(--green-700) 88%, var(--neutral-950));
+    --color-contrib-active-2: var(--green-600);
+    --color-contrib-active-3: var(--green-500);
+    --color-contrib-active-4: var(--green-400);
+    --color-contrib-active-5: var(--green-300);
+    --color-snake: var(--neutral-50);
+    --color-snake-food: var(--neutral-300);
+    --color-snake-active: var(--green-200);
+    --color-snake-food-active: var(--green-400);
+    --color-snake-glow-active: color-mix(in srgb, var(--green-50) 24%, transparent);
+    --color-gameover-surface: color-mix(in srgb, var(--neutral-950) 90%, transparent);
+    --color-gameover-border: color-mix(in srgb, var(--neutral-50) 8%, transparent);
+
+    --shadow-elevation-2:
+      0 1px 2px color-mix(in srgb, var(--neutral-950) 30%, transparent),
+      0 8px 18px color-mix(in srgb, var(--neutral-950) 26%, transparent);
+    --shadow-elevation-4:
+      0 2px 4px color-mix(in srgb, var(--neutral-950) 34%, transparent),
+      0 14px 32px color-mix(in srgb, var(--neutral-950) 28%, transparent);
+  }
+}
+
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.875rem;
+}
+
+.titleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.githubMark {
+  width: 0.95rem;
+  height: 0.95rem;
+  color: var(--color-foreground-secondary);
+  flex-shrink: 0;
+}
+
+.title p,
+.title span,
+.meta span {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums;
+  text-transform: lowercase;
+  color: var(--color-foreground-secondary);
+  margin: 0;
+}
+
+.meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.85rem;
+}
+
+.map {
+  --contribution-label-width: 2.25rem;
+  --contribution-gap: 0.24rem;
+  --contribution-cell-size: max(
+    0.72rem,
+    calc((100% - var(--contribution-label-width) - (var(--contribution-gap) * var(--contribution-columns))) / var(--contribution-columns))
+  );
+  width: 100%;
+  overflow-x: hidden;
+  position: relative;
+  z-index: 2;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.map::-webkit-scrollbar {
+  display: none;
+}
+
+.months {
+  display: grid;
+  width: max-content;
+  min-width: 100%;
+  grid-template-columns: var(--contribution-label-width) repeat(var(--contribution-columns), var(--contribution-cell-size));
+  gap: var(--contribution-gap);
+  margin-bottom: 0.45rem;
+}
+
+.months span {
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--color-foreground-secondary);
+}
+
+.mapBody {
+  display: flex;
+  gap: var(--contribution-gap);
+  width: max-content;
+  min-width: 100%;
+}
+
+.boardStack {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+}
+
+.dayLabels {
+  width: var(--contribution-label-width);
+  padding-top: 0.1rem;
+  display: grid;
+  grid-template-rows: repeat(7, var(--contribution-cell-size));
+  gap: var(--contribution-gap);
+}
+
+.dayLabels span {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: var(--contribution-cell-size);
+  font-family: var(--font-ui);
+  font-size: var(--text-sm);
+  color: var(--color-foreground-secondary);
+}
+
+.board {
+  display: flex;
+  gap: var(--contribution-gap);
+  flex: none;
+  min-width: auto;
+  width: max-content;
+  outline: none;
+}
+
+.board:focus,
+.board:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.week {
+  display: grid;
+  width: var(--contribution-cell-size);
+  grid-template-rows: repeat(7, var(--contribution-cell-size));
+  gap: var(--contribution-gap);
+  flex: none;
+}
+
+.cell {
+  appearance: none;
+  border: 0;
+  border-radius: 0.18rem;
+  width: var(--contribution-cell-size);
+  height: var(--contribution-cell-size);
+  background: var(--color-contrib-1);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-contrib-5) 26%, transparent);
+  transition:
+    transform var(--duration-fast) var(--ease-standard),
+    background-color var(--duration-fast) var(--ease-standard),
+    opacity var(--duration-fast) var(--ease-standard),
+    box-shadow var(--duration-fast) var(--ease-standard);
+  cursor: pointer;
+}
+
+.cell:disabled {
+  cursor: default;
+}
+
+.cell:hover {
+  transform: scale(1.06);
+}
+
+.level0 {
+  background: var(--color-contrib-0);
+}
+
+.level1 {
+  background: var(--color-contrib-2);
+}
+
+.level2 {
+  background: var(--color-contrib-3);
+}
+
+.level3 {
+  background: var(--color-contrib-4);
+}
+
+.level4 {
+  background: var(--color-contrib-5);
+}
+
+.focus .cell {
+  background: var(--color-contrib-active-0);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-contrib-active-5) 38%, transparent);
+  opacity: 0.84;
+}
+
+.focus .level0 {
+  background: var(--color-contrib-active-0);
+}
+
+.focus .level1 {
+  background: var(--color-contrib-active-1);
+}
+
+.focus .level2 {
+  background: var(--color-contrib-active-2);
+}
+
+.focus .level3 {
+  background: var(--color-contrib-active-3);
+}
+
+.focus .level4 {
+  background: var(--color-contrib-active-4);
+}
+
+.snake {
+  background: var(--color-snake);
+  box-shadow: inset 0 0 0 1px var(--color-snake-glow);
+}
+
+.food {
+  background: var(--color-snake-food);
+}
+
+.focus .snake {
+  background: var(--color-snake-active);
+  box-shadow: inset 0 0 0 1px var(--color-snake-glow-active);
+  opacity: 1;
+}
+
+.focus .food {
+  background: var(--color-snake-food-active);
+  opacity: 1;
+}
+
+.focus .scatter {
+  background: var(--color-contrib-active-2);
+  opacity: 1;
+}
+
+.failed .cell {
+  animation: snakeFailWave 700ms var(--ease-standard) both;
+  animation-delay: var(--fail-delay, 0ms);
+}
+
+.callout {
+  position: absolute;
+  inset: 2.4rem 0 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 1rem 1.15rem 1.1rem;
+  pointer-events: none;
+  z-index: 40;
+}
+
+.callout::before {
+  content: "";
+  position: absolute;
+  width: min(24rem, calc(100% - 3rem));
+  height: 5.5rem;
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.8);
+  border: var(--border-width) solid var(--color-gameover-border);
+  box-shadow: var(--shadow-overlay);
+  z-index: -1;
+}
+
+.callout strong,
+.callout span {
+  font-family: var(--font-ui);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  text-align: center;
+}
+
+.gameOver {
+  color: var(--color-danger-text);
+}
+
+.gameOver strong {
+  font-size: 1.0625rem;
+  color: var(--color-danger-text);
+}
+
+.gameOver span {
+  font-size: var(--text-sm);
+  color: var(--color-danger-text);
+}
+
+.controlsHint {
+  inset: 2.4rem 0 0 0;
+  gap: 0.35rem;
+  color: #334155;
+}
+
+.controlsHint::before {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: color-mix(in srgb, #334155 18%, transparent);
+  width: min(24rem, calc(100% - 3rem));
+  height: 5.5rem;
+}
+
+.controlsHint strong {
+  font-size: 1.0625rem;
+  line-height: 1.05;
+  color: #0f172a;
+}
+
+.controlsHint span {
+  font-size: var(--text-sm);
+  line-height: 1.05;
+  max-width: none;
+  color: #64748b;
+}
+
+.startCountdown {
+  inset: 1.25rem 0 0 0;
+}
+
+.startCountdown::before {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: color-mix(in srgb, #334155 18%, transparent);
+  width: min(24rem, calc(100% - 3rem));
+  height: 5.5rem;
+  animation: contributionCountdownPulse 560ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.focusOverlay {
+  position: fixed;
+  inset: 0;
+  background: transparent;
+  pointer-events: auto;
+  z-index: 20;
+}
+
+.focus {
+  z-index: 30;
+}
+
+@keyframes contributionCountdownPulse {
+  0% {
+    transform: scale(0.965);
+    opacity: 0.72;
+    box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+  }
+
+  38% {
+    transform: scale(1.028);
+    opacity: 1;
+    box-shadow:
+      0 0 0 0.45rem rgba(255, 255, 255, 0.16),
+      var(--shadow-overlay);
+  }
+
+  100% {
+    transform: scale(1);
+    opacity: 1;
+    box-shadow: var(--shadow-overlay);
+  }
+}
+
+@keyframes snakeFailWave {
+  0%,
+  100% {
+    filter: none;
+    transform: scale(1);
+  }
+
+  45% {
+    background: var(--color-danger-wave);
+    box-shadow: 0 0 0 1px var(--color-danger-wave-ring);
+    transform: scale(1.06);
+  }
+
+  70% {
+    background: var(--color-danger-wave-strong);
+    box-shadow: 0 0 0 1px var(--color-danger-wave-ring-strong);
+    transform: scale(1.02);
+  }
+}
+
+@media (max-width: 767px) {
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .meta {
+    justify-content: flex-start;
+  }
+
+  .map {
+    --contribution-label-width: 2rem;
+    --contribution-cell-size: 0.95rem;
+    --contribution-gap: 0.25rem;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 0.15rem;
+  }
+
+  .months {
+    width: max-content;
+    min-width: 100%;
+    grid-template-columns: var(--contribution-label-width) repeat(var(--contribution-columns), var(--contribution-cell-size));
+    gap: var(--contribution-gap);
+  }
+
+  .mapBody {
+    width: max-content;
+    min-width: 100%;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 0.45rem;
+  }
+
+  .dayLabels {
+    width: var(--contribution-label-width);
+    grid-template-rows: repeat(7, var(--contribution-cell-size));
+    grid-template-columns: none;
+    gap: var(--contribution-gap);
+  }
+
+  .dayLabels span {
+    min-height: var(--contribution-cell-size);
+    justify-content: flex-start;
+  }
+
+  .boardStack {
+    width: max-content;
+    max-width: none;
+    margin: 0;
+    align-items: flex-start;
+    gap: 0;
+  }
+
+  .board {
+    display: flex;
+    width: max-content;
+    min-width: auto;
+    gap: var(--contribution-gap);
+  }
+
+  .week {
+    width: var(--contribution-cell-size);
+    grid-template-rows: repeat(7, var(--contribution-cell-size));
+    gap: var(--contribution-gap);
+  }
+
+  .cell {
+    width: var(--contribution-cell-size);
+    height: var(--contribution-cell-size);
+  }
+}

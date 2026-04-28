@@ -1,5 +1,4 @@
-import { ContributionSnake } from "@/components/contribution-snake";
-import { getGithubContributions } from "@/lib/github-contributions";
+import { ContributionSnake, getGithubContributions } from "@/widget";
 
 export const dynamic = "force-dynamic";
 

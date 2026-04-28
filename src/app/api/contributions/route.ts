@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getGithubContributions } from "@/lib/github-contributions";
+import { getGithubContributions } from "@/widget";
 
 export const dynamic = "force-dynamic";
 

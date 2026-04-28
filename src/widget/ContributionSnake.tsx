@@ -1,24 +1,30 @@
 "use client";
 
-// ─── Customization ───────────────────────────────────────────────────────────
-// Snake speed in milliseconds per tick. Lower = faster. Default: 120.
-const TICK_MS = 120;
-// ─────────────────────────────────────────────────────────────────────────────
-
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
-import type { ContributionCalendarData } from "@/lib/github-contributions";
+import styles from "./ContributionSnake.module.css";
+import type { ContributionCalendarData } from "./types";
 
 type Cell = {
   x: number;
   y: number;
 };
 
-type ContributionSnakeProps = {
+export type ContributionSnakeProps = {
   data: ContributionCalendarData;
+  className?: string;
+  tickMs?: number;
+  showHeader?: boolean;
+  title?: string;
 };
 
 const DAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""] as const;
+const DEFAULT_TICK_MS = 120;
+const CONTROLS_LABEL = "USE AWSD OR ARROW KEYS TO PLAY";
+
+function cx(...tokens: Array<string | false | null | undefined>) {
+  return tokens.filter(Boolean).join(" ");
+}
 
 function cellKey(cell: Cell) {
   return `${cell.x}-${cell.y}`;
@@ -37,17 +43,24 @@ function getWrappedHead(head: Cell, direction: Cell, columns: number, rows: numb
 
 function generateScatterPixels(cols: number, rs: number, occupied: Set<string>, count: number): Set<string> {
   const available: Cell[] = [];
-  for (let x = 0; x < cols; x++) {
-    for (let y = 0; y < rs; y++) {
-      if (!occupied.has(cellKey({ x, y }))) available.push({ x, y });
+
+  for (let x = 0; x < cols; x += 1) {
+    for (let y = 0; y < rs; y += 1) {
+      if (!occupied.has(cellKey({ x, y }))) {
+        available.push({ x, y });
+      }
     }
   }
-  for (let i = available.length - 1; i > 0; i--) {
+
+  for (let i = available.length - 1; i > 0; i -= 1) {
     const j = Math.floor(Math.random() * (i + 1));
     [available[i], available[j]] = [available[j], available[i]];
   }
+
   const scatter = new Set<string>();
-  available.slice(0, Math.min(count, available.length)).forEach((c) => scatter.add(cellKey(c)));
+  available.slice(0, Math.min(count, available.length)).forEach((cell) => {
+    scatter.add(cellKey(cell));
+  });
   return scatter;
 }
 
@@ -72,23 +85,21 @@ function getRandomOpenCell(columns: number, rows: number, occupied: Set<string>)
 
 function GitHubMark() {
   return (
-    <svg
-      className="contribution-github-mark"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      aria-hidden="true"
-    >
+    <svg className={styles.githubMark} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M12 2C6.477 2 2 6.589 2 12.25c0 4.529 2.865 8.37 6.839 9.727.5.095.683-.223.683-.494 0-.244-.008-.89-.013-1.747-2.782.621-3.369-1.368-3.369-1.368-.455-1.192-1.11-1.51-1.11-1.51-.908-.637.069-.624.069-.624 1.004.072 1.532 1.058 1.532 1.058.893 1.566 2.341 1.114 2.91.852.091-.667.35-1.114.636-1.37-2.22-.259-4.555-1.14-4.555-5.073 0-1.12.389-2.036 1.029-2.753-.103-.259-.446-1.302.098-2.714 0 0 .839-.275 2.75 1.051A9.29 9.29 0 0 1 12 7.077a9.3 9.3 0 0 1 2.505.35c1.909-1.326 2.747-1.051 2.747-1.051.546 1.412.202 2.455.1 2.714.641.717 1.028 1.633 1.028 2.753 0 3.943-2.338 4.811-4.565 5.064.359.319.679.95.679 1.915 0 1.383-.013 2.498-.013 2.837 0 .273.18.593.688.492C19.138 20.617 22 16.777 22 12.25 22 6.589 17.523 2 12 2Z" />
     </svg>
   );
 }
 
-export function ContributionSnake({ data }: ContributionSnakeProps) {
+export function ContributionSnake({
+  data,
+  className,
+  tickMs = DEFAULT_TICK_MS,
+  showHeader = true,
+  title,
+}: ContributionSnakeProps) {
   const rows = 7;
-  const totalMonthColumns = useMemo(
-    () => data.months.reduce((sum, month) => sum + month.span, 0),
-    [data.months]
-  );
+  const totalMonthColumns = useMemo(() => data.months.reduce((sum, month) => sum + month.span, 0), [data.months]);
   const columns = Math.max(data.weeks.length, totalMonthColumns, 53);
   const displayWeeks = useMemo(
     () =>
@@ -97,9 +108,9 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
         Array.from({ length: rows }, () => ({
           date: "",
           level: 0,
-        }))
+        })),
       ),
-    [columns, data.weeks, rows]
+    [columns, data.weeks, rows],
   );
   const [isMobile, setIsMobile] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -129,6 +140,8 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
   const columnsRef = useRef(columns);
   const intervalRef = useRef<number | null>(null);
   const stepRef = useRef<(() => void) | null>(null);
+  const headerTitle =
+    title ?? (data.total > 0 ? `${data.total} contributions in the last year` : `${data.username}'s contribution map`);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -197,10 +210,7 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
     return () => observer.disconnect();
   }, [columns, isMobile]);
 
-  const snakeSet = useMemo(
-    () => new Set(snake.map((cell) => cellKey(cell))),
-    [snake]
-  );
+  const snakeSet = useMemo(() => new Set(snake.map((cell) => cellKey(cell))), [snake]);
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -221,59 +231,80 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
     };
   }, []);
 
-  useEffect(() => { queuedDirectionRef.current = queuedDirection; }, [queuedDirection]);
-  useEffect(() => { foodRef.current = food; }, [food]);
-  useEffect(() => { columnsRef.current = columns; }, [columns]);
+  useEffect(() => {
+    queuedDirectionRef.current = queuedDirection;
+  }, [queuedDirection]);
+
+  useEffect(() => {
+    foodRef.current = food;
+  }, [food]);
+
+  useEffect(() => {
+    columnsRef.current = columns;
+  }, [columns]);
 
   useEffect(() => {
     if (!isPlaying) {
       stepRef.current = null;
-      if (intervalRef.current) window.clearInterval(intervalRef.current);
+      if (intervalRef.current) {
+        window.clearInterval(intervalRef.current);
+      }
       return;
     }
 
     const step = () => {
       setSnake((currentSnake) => {
-        if (currentSnake.length === 0) return currentSnake;
+        if (currentSnake.length === 0) {
+          return currentSnake;
+        }
+
         const nextDir = queuedDirectionRef.current;
         const cols = columnsRef.current;
         const head = currentSnake[0];
         const nextHead = getWrappedHead(head, nextDir, cols, rows);
         const bodyWithoutTail = currentSnake.slice(0, -1);
-        if (bodyWithoutTail.some((s) => cellsEqual(s, nextHead))) {
+
+        if (bodyWithoutTail.some((segment) => cellsEqual(segment, nextHead))) {
           setIsPlaying(false);
           setIsPaused(false);
           setIsFailed(true);
           setFailOrigin(nextHead);
           return currentSnake;
         }
+
         setDirection(nextDir);
+
         if (foodRef.current && cellsEqual(nextHead, foodRef.current)) {
           const grown = [nextHead, ...currentSnake];
-          const occupied = new Set(grown.map((c) => cellKey(c)));
-          setScore((s) => {
-            const next = s + 1;
-            setTopScore((t) => {
-              const nextTop = Math.max(t, next);
-              window.localStorage.setItem("pixelsnake-top-score", String(nextTop));
-              return nextTop;
+          const occupied = new Set(grown.map((cell) => cellKey(cell)));
+
+          setScore((currentScore) => {
+            const nextScore = currentScore + 1;
+            setTopScore((currentTopScore) => {
+              const nextTopScore = Math.max(currentTopScore, nextScore);
+              window.localStorage.setItem("pixelsnake-top-score", String(nextTopScore));
+              return nextTopScore;
             });
-            return next;
+            return nextScore;
           });
+
           setFood(getRandomOpenCell(cols, rows, occupied));
           return grown;
         }
+
         return [nextHead, ...currentSnake.slice(0, -1)];
       });
     };
 
     stepRef.current = step;
-    intervalRef.current = window.setInterval(step, TICK_MS);
+    intervalRef.current = window.setInterval(step, tickMs);
 
     return () => {
-      if (intervalRef.current) window.clearInterval(intervalRef.current);
+      if (intervalRef.current) {
+        window.clearInterval(intervalRef.current);
+      }
     };
-  }, [isPlaying, rows]);
+  }, [isPlaying, rows, tickMs]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -305,23 +336,24 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
 
       event.preventDefault();
 
-      if (
-        nextDirection.x === -direction.x &&
-        nextDirection.y === -direction.y
-      ) {
+      if (nextDirection.x === -direction.x && nextDirection.y === -direction.y) {
         return;
       }
 
       queuedDirectionRef.current = nextDirection;
       setQueuedDirection(nextDirection);
       stepRef.current?.();
-      if (intervalRef.current) window.clearInterval(intervalRef.current);
-      if (stepRef.current) intervalRef.current = window.setInterval(stepRef.current, TICK_MS);
+      if (intervalRef.current) {
+        window.clearInterval(intervalRef.current);
+      }
+      if (stepRef.current) {
+        intervalRef.current = window.setInterval(stepRef.current, tickMs);
+      }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [direction, isPlaying]);
+  }, [direction, isPlaying, tickMs]);
 
   useEffect(() => {
     if (isPlaying) {
@@ -351,45 +383,53 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
   }, [isPlaying]);
 
   const unlockAudio = () => {
-    if (audioCtxRef.current) return;
+    if (audioCtxRef.current) {
+      return;
+    }
+
     try {
       const AudioCtx =
         window.AudioContext ||
-        (window as unknown as { webkitAudioContext: typeof AudioContext })
-          .webkitAudioContext;
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       audioCtxRef.current = new AudioCtx();
       audioCtxRef.current.resume();
     } catch {
-      // audio not available
+      // audio unavailable
     }
   };
 
   const playEat = () => {
     const ctx = audioCtxRef.current;
-    if (!ctx) return;
+    if (!ctx) {
+      return;
+    }
+
     const notes = [440, 660];
-    notes.forEach((freq, i) => {
+    notes.forEach((freq, index) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "square";
       osc.connect(gain);
       gain.connect(ctx.destination);
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + i * 0.07);
-      gain.gain.setValueAtTime(0.035, ctx.currentTime + i * 0.07);
-      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + i * 0.07 + 0.09);
-      osc.start(ctx.currentTime + i * 0.07);
-      osc.stop(ctx.currentTime + i * 0.07 + 0.12);
+      osc.frequency.setValueAtTime(freq, ctx.currentTime + index * 0.07);
+      gain.gain.setValueAtTime(0.035, ctx.currentTime + index * 0.07);
+      gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + index * 0.07 + 0.09);
+      osc.start(ctx.currentTime + index * 0.07);
+      osc.stop(ctx.currentTime + index * 0.07 + 0.12);
     });
   };
 
   const playGameOver = () => {
     const ctx = audioCtxRef.current;
-    if (!ctx) return;
+    if (!ctx) {
+      return;
+    }
+
     [
-      { freq: 196, start: 0,    dur: 0.38 },
+      { freq: 196, start: 0, dur: 0.38 },
       { freq: 156, start: 0.32, dur: 0.38 },
       { freq: 124, start: 0.62, dur: 0.38 },
-      { freq: 87,  start: 0.92, dur: 0.55 },
+      { freq: 87, start: 0.92, dur: 0.55 },
     ].forEach(({ freq, start, dur }) => {
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
@@ -411,14 +451,12 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
       playEat();
     }
     prevScoreRef.current = score;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [score]);
 
   useEffect(() => {
     if (isFailed) {
       playGameOver();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isFailed]);
 
   const beginGame = (origin: Cell) => {
@@ -430,7 +468,11 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
     const occupied = new Set(initialSnake.map((cell) => cellKey(cell)));
     const foodCell = getRandomOpenCell(columns, rows, occupied);
     const allOccupied = new Set(occupied);
-    if (foodCell) allOccupied.add(cellKey(foodCell));
+
+    if (foodCell) {
+      allOccupied.add(cellKey(foodCell));
+    }
+
     setGamePixels(generateScatterPixels(columns, rows, allOccupied, Math.floor(columns * rows * 0.06)));
     setSnake(initialSnake);
     setDirection({ x: 1, y: 0 });
@@ -524,8 +566,12 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
     queuedDirectionRef.current = nextDirection;
     setQueuedDirection(nextDirection);
     stepRef.current?.();
-    if (intervalRef.current) window.clearInterval(intervalRef.current);
-    if (stepRef.current) intervalRef.current = window.setInterval(stepRef.current, TICK_MS);
+    if (intervalRef.current) {
+      window.clearInterval(intervalRef.current);
+    }
+    if (stepRef.current) {
+      intervalRef.current = window.setInterval(stepRef.current, tickMs);
+    }
   };
 
   const handleMapPointerDown = (event: ReactMouseEvent<HTMLDivElement>) => {
@@ -533,83 +579,84 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
   };
 
   return (
-    <section className="contribution-snake-section" aria-label="GitHub contribution activity">
-      <div className="contribution-snake-header">
-        <div className="contribution-snake-title-group">
-          <div className="contribution-snake-title">
-            <GitHubMark />
-            <p>
-              {data.total > 0
-                ? `${data.total} contributions in the last year`
-                : `${data.username}'s contribution map`}
-            </p>
+    <section className={cx(styles.root, className)} aria-label="GitHub contribution activity">
+      {showHeader ? (
+        <div className={styles.header}>
+          <div className={styles.titleGroup}>
+            <div className={styles.title}>
+              <GitHubMark />
+              <p>{headerTitle}</p>
+            </div>
+          </div>
+          <div className={styles.meta}>
+            {isMobile ? <span>scroll to browse activity</span> : null}
+            {!isMobile && (isPlaying || isPaused || isFailed) ? (
+              <>
+                <span>score {score}</span>
+                <span>top {topScore}</span>
+              </>
+            ) : null}
           </div>
         </div>
-        <div className="contribution-snake-meta">
-          {isMobile ? <span>scroll to browse activity</span> : null}
-          {!isMobile && (isPlaying || isPaused || isFailed) ? (
-            <>
-              <span>score {score}</span>
-              <span>top {topScore}</span>
-            </>
-          ) : null}
-        </div>
-      </div>
+      ) : null}
 
-      {isPlaying ? <div className="snake-focus-overlay" aria-hidden="true" /> : null}
+      {isPlaying ? <div className={styles.focusOverlay} aria-hidden="true" /> : null}
 
       <div
         ref={mapRef}
-        className={`contribution-map ${(isPlaying || isPaused || isFailed) ? "is-focus" : ""}`}
-        style={{
-          ["--contribution-columns" as string]: String(columns),
-          ...(desktopCellSize ? { ["--contribution-cell-size" as string]: `${desktopCellSize}px` } : {}),
-        }}
+        className={cx(styles.map, (isPlaying || isPaused || isFailed) && styles.focus)}
+        style={
+          {
+            ["--contribution-columns" as string]: String(columns),
+            ...(desktopCellSize ? { ["--contribution-cell-size" as string]: `${desktopCellSize}px` } : {}),
+          } as CSSProperties
+        }
         onMouseDown={handleMapPointerDown}
       >
-        <div className="contribution-months" aria-hidden="true">
+        <div className={styles.months} aria-hidden="true">
           {data.months.map((month) => (
-            <span
-              key={`${month.label}-${month.start}`}
-              style={{ gridColumn: `${month.start + 1} / span ${month.span}` }}
-            >
+            <span key={`${month.label}-${month.start}`} style={{ gridColumn: `${month.start + 1} / span ${month.span}` }}>
               {month.label}
             </span>
           ))}
         </div>
 
-        <div className="contribution-map-body">
-          <div className="contribution-day-labels" aria-hidden="true">
+        <div className={styles.mapBody}>
+          <div className={styles.dayLabels} aria-hidden="true">
             {DAY_LABELS.map((label, index) => (
               <span key={`${label}-${index}`}>{label}</span>
             ))}
           </div>
 
-          <div className="contribution-board-stack">
+          <div className={styles.boardStack}>
             <div
               ref={boardRef}
-              className={`contribution-snake-board ${isPlaying ? "is-playing" : ""} ${isFailed ? "is-failed" : ""}`}
+              className={cx(styles.board, isFailed && styles.failed)}
               tabIndex={isPlaying ? 0 : -1}
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
               {displayWeeks.map((week, weekIndex) => (
-                <div key={`week-${weekIndex}`} className="contribution-week">
+                <div key={`week-${weekIndex}`} className={styles.week}>
                   {week.map((day, dayIndex) => {
                     const cell = { x: weekIndex, y: dayIndex };
                     const isSnakeCell = snakeSet.has(cellKey(cell));
                     const isFoodCell = food ? cellsEqual(cell, food) : false;
                     const gameActive = isPlaying || isPaused || isFailed;
                     const isScatterCell = gameActive && gamePixels.has(cellKey(cell));
-                    const failDistance = failOrigin
-                      ? Math.abs(cell.x - failOrigin.x) + Math.abs(cell.y - failOrigin.y)
-                      : 0;
+                    const failDistance = failOrigin ? Math.abs(cell.x - failOrigin.x) + Math.abs(cell.y - failOrigin.y) : 0;
 
                     return (
                       <button
                         key={day.date || `${weekIndex}-${dayIndex}`}
                         type="button"
-                        className={`contribution-snake-cell ${gameActive ? "level-0" : `level-${day.level}`} ${isSnakeCell ? "is-snake" : ""} ${isFoodCell ? "is-food" : ""} ${isScatterCell ? "is-scatter" : ""}`}
+                        className={cx(
+                          styles.cell,
+                          gameActive ? styles.level0 : styles[`level${day.level}` as keyof typeof styles],
+                          isSnakeCell && styles.snake,
+                          isFoodCell && styles.food,
+                          isScatterCell && styles.scatter,
+                        )}
                         style={
                           isFailed && !prefersReducedMotion
                             ? ({ ["--fail-delay" as string]: `${failDistance * 18}ms` } as CSSProperties)
@@ -634,8 +681,8 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
                           isMobile
                             ? `${day.date || "Contribution cell"}`
                             : isPlaying
-                            ? `Snake board cell ${weekIndex + 1}, ${dayIndex + 1}`
-                            : `${day.date || "Contribution cell"}`
+                              ? `Snake board cell ${weekIndex + 1}, ${dayIndex + 1}`
+                              : `${day.date || "Contribution cell"}`
                         }
                       />
                     );
@@ -647,7 +694,7 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
         </div>
 
         {isFailed ? (
-          <div className="contribution-game-over contribution-board-callout">
+          <div className={cx(styles.callout, styles.gameOver)}>
             <strong>GAME OVER</strong>
             <span>press any square to restart</span>
           </div>
@@ -656,18 +703,17 @@ export function ContributionSnake({ data }: ContributionSnakeProps) {
         {(isStarting || isPlaying) && showControlsHint ? (
           <div
             key={isStarting ? `countdown-${countdownLabel ?? "idle"}` : "controls-hint"}
-            className={`contribution-board-callout ${isStarting ? "contribution-start-countdown" : "contribution-controls-hint"}`}
-            data-countdown-label={isStarting && countdownLabel ? countdownLabel : undefined}
+            className={cx(styles.callout, isStarting ? styles.startCountdown : styles.controlsHint)}
             aria-hidden="true"
           >
             {isStarting && countdownLabel ? (
               <>
-                <strong>USE AWSD OR ARROW KEYS TO PLAY</strong>
+                <strong>{CONTROLS_LABEL}</strong>
                 <span>{countdownLabel === "GO" ? "GO!!" : `STARTING IN ${countdownLabel}`}</span>
               </>
             ) : (
               <>
-                <strong>USE AWSD OR ARROW KEYS TO PLAY</strong>
+                <strong>{CONTROLS_LABEL}</strong>
                 <span>COLLECT PIXELS. DON&apos;T CRASH.</span>
               </>
             )}
