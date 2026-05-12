@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties, MouseEvent as ReactMouseEvent } from "react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import styles from "./ContributionSnake.module.css";
 import type { ContributionCalendarData } from "./types";
 
@@ -17,10 +17,15 @@ export type ContributionSnakeProps = {
   showHeader?: boolean;
   showCalendarLabels?: boolean;
   title?: string;
+  scoreStore?: ContributionSnakeScoreStore;
   onGameStateChange?: (state: ContributionSnakeGameState) => void;
 };
 
 export type ContributionSnakeGameState = "idle" | "countdown" | "playing" | "paused" | "failed";
+export type ContributionSnakeScoreStore = {
+  loadTopScore?: () => number | null | undefined | Promise<number | null | undefined>;
+  saveTopScore?: (score: number) => number | null | undefined | void | Promise<number | null | undefined | void>;
+};
 
 const DAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""] as const;
 const DEFAULT_TICK_MS = 120;
@@ -40,6 +45,10 @@ function cellKey(cell: Cell) {
 
 function cellsEqual(a: Cell, b: Cell) {
   return a.x === b.x && a.y === b.y;
+}
+
+function normalizeScore(score: unknown) {
+  return typeof score === "number" && Number.isFinite(score) && score >= 0 ? Math.floor(score) : null;
 }
 
 function getWrappedHead(head: Cell, direction: Cell, columns: number, rows: number): Cell {
@@ -121,6 +130,7 @@ export function ContributionSnake({
   showHeader = true,
   showCalendarLabels = true,
   title,
+  scoreStore,
   onGameStateChange,
 }: ContributionSnakeProps) {
   const rows = 7;
@@ -192,6 +202,8 @@ export function ContributionSnake({
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const prevScoreRef = useRef(0);
+  const topScoreRef = useRef(0);
+  const scoreStoreRef = useRef<ContributionSnakeScoreStore | undefined>(scoreStore);
   const countdownStepTimeoutRef = useRef<number | null>(null);
   const queuedDirectionRef = useRef<Cell>({ x: 1, y: 0 });
   const foodRef = useRef<Cell | null>(null);
@@ -295,15 +307,83 @@ export function ContributionSnake({
   const snakeSet = useMemo(() => new Set(snake.map((cell) => cellKey(cell))), [snake]);
 
   useEffect(() => {
-    const timeoutId = window.setTimeout(() => {
-      const stored = window.localStorage.getItem("pixelsnake-top-score");
-      if (stored) {
-        setTopScore(Number.parseInt(stored, 10) || 0);
+    scoreStoreRef.current = scoreStore;
+  }, [scoreStore]);
+
+  useEffect(() => {
+    topScoreRef.current = topScore;
+  }, [topScore]);
+
+  const persistTopScore = useCallback((nextTopScore: number) => {
+    const store = scoreStoreRef.current;
+
+    if (store) {
+      if (!store.saveTopScore) {
+        return;
       }
+
+      void Promise.resolve(store.saveTopScore(nextTopScore))
+        .then((confirmedScore) => {
+          const normalizedScore = normalizeScore(confirmedScore);
+          if (normalizedScore === null || normalizedScore <= topScoreRef.current) {
+            return;
+          }
+
+          topScoreRef.current = normalizedScore;
+          setTopScore(normalizedScore);
+        })
+        .catch(() => {
+          // Keep the optimistic score if the external store is unavailable.
+        });
+      return;
+    }
+
+    try {
+      window.localStorage.setItem("pixelsnake-top-score", String(nextTopScore));
+    } catch {
+      // Top score persistence is optional.
+    }
+  }, []);
+
+  const promoteTopScore = useCallback(
+    (nextScore: number) => {
+      if (nextScore <= topScoreRef.current) {
+        return;
+      }
+
+      topScoreRef.current = nextScore;
+      setTopScore(nextScore);
+      persistTopScore(nextScore);
+    },
+    [persistTopScore],
+  );
+
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const loadTopScore = async () => {
+        try {
+          const store = scoreStoreRef.current;
+          const rawScore = store?.loadTopScore
+            ? await store.loadTopScore()
+            : store
+              ? null
+              : Number.parseInt(window.localStorage.getItem("pixelsnake-top-score") ?? "0", 10);
+          const loadedScore = normalizeScore(rawScore);
+
+          if (loadedScore !== null && loadedScore > topScoreRef.current) {
+            topScoreRef.current = loadedScore;
+            setTopScore(loadedScore);
+          }
+        } catch {
+          // Keep the current score if the store cannot be read.
+        }
+      };
+
+      void loadTopScore();
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
-  }, []);
+  }, [scoreStore]);
 
   useEffect(() => {
     return () => {
@@ -366,11 +446,7 @@ export function ContributionSnake({
 
           setScore((currentScore) => {
             const nextScore = currentScore + 1;
-            setTopScore((currentTopScore) => {
-              const nextTopScore = Math.max(currentTopScore, nextScore);
-              window.localStorage.setItem("pixelsnake-top-score", String(nextTopScore));
-              return nextTopScore;
-            });
+            promoteTopScore(nextScore);
             return nextScore;
           });
 
@@ -390,7 +466,7 @@ export function ContributionSnake({
         window.clearInterval(intervalRef.current);
       }
     };
-  }, [isPlaying, rows, tickMs]);
+  }, [isPlaying, promoteTopScore, rows, tickMs]);
 
   useEffect(() => {
     if (!isPlaying) {

@@ -121,6 +121,7 @@ type ContributionSnakeProps = {
   showHeader?: boolean;
   showCalendarLabels?: boolean;
   title?: string;
+  scoreStore?: ContributionSnakeScoreStore;
   onGameStateChange?: (state: ContributionSnakeGameState) => void;
 };
 
@@ -130,6 +131,11 @@ type ContributionSnakeGameState =
   | "playing"
   | "paused"
   | "failed";
+
+type ContributionSnakeScoreStore = {
+  loadTopScore?: () => number | null | undefined | Promise<number | null | undefined>;
+  saveTopScore?: (score: number) => number | null | undefined | void | Promise<number | null | undefined | void>;
+};
 ```
 
 | Prop | Default | Notes |
@@ -140,7 +146,31 @@ type ContributionSnakeGameState =
 | `showHeader` | `true` | Hides the built-in contribution title and score row when false |
 | `showCalendarLabels` | `true` | Hides month and weekday labels when false |
 | `title` | auto | Overrides the built-in heading |
+| `scoreStore` | localStorage | Loads and saves top score through your own app |
 | `onGameStateChange` | none | Reports `idle`, `countdown`, `playing`, `paused`, and `failed` |
+
+### External top score
+
+By default, Pixelsnake stores the top score in `localStorage`. Pass `scoreStore` when your app owns the score.
+
+```tsx
+const scoreStore = {
+  async loadTopScore() {
+    const response = await fetch("/api/snake-top-score", { cache: "no-store" });
+    const payload = (await response.json()) as { topScore?: number };
+    return payload.topScore ?? 0;
+  },
+  async saveTopScore(score: number) {
+    const response = await fetch("/api/snake-top-score", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ score }),
+    });
+    const payload = (await response.json()) as { topScore?: number };
+    return payload.topScore;
+  },
+};
+```
 
 ### `getGithubContributions(username)`
 
