@@ -125,19 +125,20 @@ export function ContributionSnake({
 }: ContributionSnakeProps) {
   const rows = 7;
   const totalMonthColumns = useMemo(() => data.months.reduce((sum, month) => sum + month.span, 0), [data.months]);
-  const columns = Math.max(data.weeks.length, totalMonthColumns, 53);
-  const displayWeeks = useMemo(
+  const fullColumns = Math.max(data.weeks.length, totalMonthColumns, 53);
+  const allDisplayWeeks = useMemo(
     () =>
-      Array.from({ length: columns }, (_, weekIndex) =>
+      Array.from({ length: fullColumns }, (_, weekIndex) =>
         data.weeks[weekIndex] ??
         Array.from({ length: rows }, () => ({
           date: "",
           level: 0,
         })),
       ),
-    [columns, data.weeks, rows],
+    [fullColumns, data.weeks, rows],
   );
   const [isMobile, setIsMobile] = useState(false);
+  const [mobileVisibleWeeks, setMobileVisibleWeeks] = useState(14);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [snake, setSnake] = useState<Cell[]>([]);
@@ -153,7 +154,39 @@ export function ContributionSnake({
   const [countdownLabel, setCountdownLabel] = useState<"3" | "2" | "1" | null>(null);
   const [showControlsHint, setShowControlsHint] = useState(false);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const [desktopCellSize, setDesktopCellSize] = useState<number | null>(null);
+  const [computedCellSize, setComputedCellSize] = useState<number | null>(null);
+  const columns = isMobile ? Math.max(1, Math.min(fullColumns, mobileVisibleWeeks)) : fullColumns;
+  const visibleWeekStart = isMobile ? Math.max(0, fullColumns - columns) : 0;
+  const displayWeeks = useMemo(
+    () => allDisplayWeeks.slice(visibleWeekStart, visibleWeekStart + columns),
+    [allDisplayWeeks, columns, visibleWeekStart],
+  );
+  const visibleMonths = useMemo(() => {
+    if (!isMobile) {
+      return data.months;
+    }
+
+    const visibleWeekEnd = visibleWeekStart + columns;
+
+    return data.months.flatMap((month) => {
+      const monthStart = month.start;
+      const monthEnd = month.start + month.span;
+      const clippedStart = Math.max(monthStart, visibleWeekStart);
+      const clippedEnd = Math.min(monthEnd, visibleWeekEnd);
+
+      if (clippedEnd <= clippedStart) {
+        return [];
+      }
+
+      return [
+        {
+          ...month,
+          start: clippedStart - visibleWeekStart,
+          span: clippedEnd - clippedStart,
+        },
+      ];
+    });
+  }, [columns, data.months, isMobile, visibleWeekStart]);
   const boardRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<HTMLDivElement | null>(null);
   const touchStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -221,20 +254,33 @@ export function ContributionSnake({
   useEffect(() => {
     const element = mapRef.current;
 
-    if (!element || isMobile) {
+    if (!element) {
       return;
     }
 
     const remSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-    const labelWidth = showCalendarLabels ? 2.25 * remSize : 0;
-    const gapWidth = 0.24 * remSize;
+    const labelWidth = showCalendarLabels ? (isMobile ? 2 : 2.25) * remSize : 0;
+    const gapWidth = (isMobile ? 0.25 : 0.24) * remSize;
     const minCellSize = 0.72 * remSize;
+    const mobileTargetCellSize = 0.95 * remSize;
     const safetyPadding = 2;
 
     const updateCellSize = () => {
-      const availableWidth = element.clientWidth - labelWidth - gapWidth * columns - safetyPadding;
-      const nextSize = Math.max(minCellSize, availableWidth / columns);
-      setDesktopCellSize(nextSize);
+      if (isMobile) {
+        const visibleWeekCapacity = Math.floor(
+          (element.clientWidth - labelWidth + gapWidth - safetyPadding) / (mobileTargetCellSize + gapWidth),
+        );
+        const nextVisibleWeeks = Math.max(1, Math.min(fullColumns, visibleWeekCapacity));
+        const availableWidth = element.clientWidth - labelWidth - gapWidth * nextVisibleWeeks - safetyPadding;
+        setMobileVisibleWeeks(nextVisibleWeeks);
+        setComputedCellSize(Math.max(minCellSize, Math.min(mobileTargetCellSize, availableWidth / nextVisibleWeeks)));
+        element.scrollLeft = 0;
+        return;
+      }
+
+      const availableWidth = element.clientWidth - labelWidth - gapWidth * fullColumns - safetyPadding;
+      const nextSize = Math.max(minCellSize, availableWidth / fullColumns);
+      setComputedCellSize(nextSize);
       element.scrollLeft = 0;
     };
 
@@ -244,7 +290,7 @@ export function ContributionSnake({
     observer.observe(element);
 
     return () => observer.disconnect();
-  }, [columns, isMobile, showCalendarLabels]);
+  }, [fullColumns, isMobile, showCalendarLabels]);
 
   const snakeSet = useMemo(() => new Set(snake.map((cell) => cellKey(cell))), [snake]);
 
@@ -646,7 +692,7 @@ export function ContributionSnake({
             </div>
           </div>
           <div className={styles.meta}>
-            {isMobile ? <span>scroll to browse activity</span> : null}
+            {isMobile ? <span>recent activity</span> : null}
             {!isMobile && (isPlaying || isPaused || isFailed) ? (
               <>
                 <span>score {score}</span>
@@ -665,14 +711,14 @@ export function ContributionSnake({
         style={
           {
             ["--contribution-columns" as string]: String(columns),
-            ...(desktopCellSize ? { ["--contribution-cell-size" as string]: `${desktopCellSize}px` } : {}),
+            ...(computedCellSize ? { ["--contribution-cell-size" as string]: `${computedCellSize}px` } : {}),
           } as CSSProperties
         }
         onMouseDown={handleMapPointerDown}
       >
         {showCalendarLabels ? (
           <div className={styles.months} aria-hidden="true">
-            {data.months.map((month) => (
+            {visibleMonths.map((month) => (
               <span key={`${month.label}-${month.start}`} style={{ gridColumn: `${month.start + 1} / span ${month.span}` }}>
                 {month.label}
               </span>
@@ -764,8 +810,6 @@ export function ContributionSnake({
               <div className={cx(styles.callout, styles.paused)}>
                 <span className={styles.pausedMessage}>
                   <PauseIcon />
-                  <strong>PAUSED</strong>
-                  <span aria-hidden="true">-</span>
                   <span>press anywhere to resume</span>
                 </span>
               </div>
