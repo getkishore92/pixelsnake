@@ -85,6 +85,10 @@
   --color-danger-text: var(--red-500);
   --color-danger-wave-ring: color-mix(in srgb, var(--red-600) 22%, transparent);
   --color-danger-wave-ring-strong: color-mix(in srgb, var(--red-800) 14%, transparent);
+  --color-start-wave: var(--green-500);
+  --color-start-wave-strong: var(--green-700);
+  --color-start-wave-ring: color-mix(in srgb, var(--green-500) 22%, transparent);
+  --color-start-wave-ring-strong: color-mix(in srgb, var(--green-700) 14%, transparent);
   --color-gameover-surface: color-mix(in srgb, var(--neutral-50) 94%, transparent);
   --color-gameover-border: color-mix(in srgb, var(--neutral-950) 8%, transparent);
 
@@ -374,6 +378,13 @@
   background: var(--color-contrib-active-4);
 }
 
+.clean .cell,
+.focus .clean .cell {
+  background: var(--color-contrib-active-0);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-contrib-active-5) 24%, transparent);
+  opacity: 0.86;
+}
+
 .snake {
   background: var(--color-snake);
   box-shadow: inset 0 0 0 1px var(--color-snake-glow);
@@ -394,14 +405,14 @@
   opacity: 1;
 }
 
-.focus .scatter {
-  background: var(--color-contrib-active-2);
-  opacity: 1;
-}
-
 .failed .cell {
   animation: snakeFailWave 700ms var(--ease-standard) both;
   animation-delay: var(--fail-delay, 0ms);
+}
+
+.starting .cell {
+  animation: snakeStartWave 360ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--start-delay, 0ms);
 }
 
 .callout {
@@ -535,6 +546,42 @@
     background: var(--color-danger-wave-strong);
     box-shadow: 0 0 0 1px var(--color-danger-wave-ring-strong);
     transform: scale(1.02);
+  }
+}
+
+@keyframes snakeStartWave {
+  0% {
+    filter: none;
+    transform: scale(1);
+  }
+
+  22% {
+    background: color-mix(in srgb, var(--color-start-wave) 72%, var(--color-contrib-active-0));
+    box-shadow: 0 0 0 1px color-mix(in srgb, var(--color-start-wave-ring) 68%, transparent);
+    opacity: 0.96;
+    transform: translateY(-0.5px) scale(1.035);
+  }
+
+  48% {
+    background: var(--color-start-wave-strong);
+    box-shadow: 0 0 0 1px var(--color-start-wave-ring-strong);
+    opacity: 1;
+    transform: translateY(-1px) scale(1.08);
+  }
+
+  76% {
+    background: var(--color-start-wave);
+    box-shadow: 0 0 0 1px var(--color-start-wave-ring);
+    opacity: 1;
+    transform: translateY(0) scale(1.025);
+  }
+
+  100% {
+    background: var(--color-contrib-active-0);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-contrib-active-5) 24%, transparent);
+    filter: none;
+    opacity: 0.86;
+    transform: scale(1);
   }
 }
 

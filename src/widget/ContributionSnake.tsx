@@ -21,6 +21,10 @@ export type ContributionSnakeProps = {
 const DAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""] as const;
 const DEFAULT_TICK_MS = 120;
 const CONTROLS_LABEL = "USE AWSD OR ARROW KEYS TO PLAY";
+const START_WAVE_DURATION_MS = 360;
+const START_WAVE_DIAGONAL_DELAY_MS = 260;
+const START_WAVE_RIPPLE_MS = 16;
+const START_WAVE_SETTLE_MS = 16;
 
 function cx(...tokens: Array<string | false | null | undefined>) {
   return tokens.filter(Boolean).join(" ");
@@ -41,29 +45,6 @@ function getWrappedHead(head: Cell, direction: Cell, columns: number, rows: numb
   };
 }
 
-function generateScatterPixels(cols: number, rs: number, occupied: Set<string>, count: number): Set<string> {
-  const available: Cell[] = [];
-
-  for (let x = 0; x < cols; x += 1) {
-    for (let y = 0; y < rs; y += 1) {
-      if (!occupied.has(cellKey({ x, y }))) {
-        available.push({ x, y });
-      }
-    }
-  }
-
-  for (let i = available.length - 1; i > 0; i -= 1) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [available[i], available[j]] = [available[j], available[i]];
-  }
-
-  const scatter = new Set<string>();
-  available.slice(0, Math.min(count, available.length)).forEach((cell) => {
-    scatter.add(cellKey(cell));
-  });
-  return scatter;
-}
-
 function getRandomOpenCell(columns: number, rows: number, occupied: Set<string>) {
   const available: Cell[] = [];
 
@@ -81,6 +62,36 @@ function getRandomOpenCell(columns: number, rows: number, occupied: Set<string>)
   }
 
   return available[Math.floor(Math.random() * available.length)];
+}
+
+function getInitialSnake(origin: Cell, columns: number) {
+  return Array.from({ length: 4 }, (_, index) => ({
+    x: (origin.x - index + columns) % columns,
+    y: origin.y,
+  }));
+}
+
+function getStartWaveDelay(cell: Cell, columns: number, rows: number) {
+  const columnProgress = columns > 1 ? cell.x / (columns - 1) : 0;
+  const rowProgress = rows > 1 ? cell.y / (rows - 1) : 0;
+  const diagonalProgress = (columnProgress + rowProgress) / 2;
+  const ripple =
+    Math.sin(cell.x * 0.72) * START_WAVE_RIPPLE_MS +
+    Math.sin((cell.x + cell.y) * 0.31) * 10;
+
+  return Math.max(0, Math.round(diagonalProgress * START_WAVE_DIAGONAL_DELAY_MS + ripple));
+}
+
+function getMaxStartWaveDelay(columns: number, rows: number) {
+  let maxDelay = 0;
+
+  for (let x = 0; x < columns; x += 1) {
+    for (let y = 0; y < rows; y += 1) {
+      maxDelay = Math.max(maxDelay, getStartWaveDelay({ x, y }, columns, rows));
+    }
+  }
+
+  return maxDelay;
 }
 
 function GitHubMark() {
@@ -124,9 +135,9 @@ export function ContributionSnake({
   const [isFailed, setIsFailed] = useState(false);
   const [failOrigin, setFailOrigin] = useState<Cell | null>(null);
   const [isStarting, setIsStarting] = useState(false);
-  const [countdownLabel, setCountdownLabel] = useState<"3" | "2" | "1" | "GO" | null>(null);
+  const [isStartClearing, setIsStartClearing] = useState(false);
+  const [countdownLabel, setCountdownLabel] = useState<"3" | "2" | "1" | null>(null);
   const [showControlsHint, setShowControlsHint] = useState(false);
-  const [gamePixels, setGamePixels] = useState<Set<string>>(new Set());
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [desktopCellSize, setDesktopCellSize] = useState<number | null>(null);
   const boardRef = useRef<HTMLDivElement | null>(null);
@@ -142,6 +153,7 @@ export function ContributionSnake({
   const stepRef = useRef<(() => void) | null>(null);
   const headerTitle =
     title ?? (data.total > 0 ? `${data.total} contributions in the last year` : `${data.username}'s contribution map`);
+  const isGameBoardClean = !isMobile && (isPlaying || isPaused || isFailed);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -177,6 +189,7 @@ export function ContributionSnake({
       setIsPaused(false);
       setIsFailed(false);
       setFailOrigin(null);
+      setIsStartClearing(false);
     }, 0);
 
     return () => window.clearTimeout(timeoutId);
@@ -460,20 +473,10 @@ export function ContributionSnake({
   }, [isFailed]);
 
   const beginGame = (origin: Cell) => {
-    const initialSnake = [
-      origin,
-      { x: (origin.x - 1 + columns) % columns, y: origin.y },
-      { x: (origin.x - 2 + columns) % columns, y: origin.y },
-    ];
+    const initialSnake = getInitialSnake(origin, columns);
     const occupied = new Set(initialSnake.map((cell) => cellKey(cell)));
     const foodCell = getRandomOpenCell(columns, rows, occupied);
-    const allOccupied = new Set(occupied);
 
-    if (foodCell) {
-      allOccupied.add(cellKey(foodCell));
-    }
-
-    setGamePixels(generateScatterPixels(columns, rows, allOccupied, Math.floor(columns * rows * 0.06)));
     setSnake(initialSnake);
     setDirection({ x: 1, y: 0 });
     queuedDirectionRef.current = { x: 1, y: 0 };
@@ -483,6 +486,7 @@ export function ContributionSnake({
     setIsFailed(false);
     setIsPaused(false);
     setFailOrigin(null);
+    setIsStartClearing(false);
     setIsStarting(false);
     setCountdownLabel(null);
     setShowControlsHint(false);
@@ -497,22 +501,38 @@ export function ContributionSnake({
     }
 
     setShowControlsHint(true);
+    setSnake([]);
+    setFood(null);
+    setScore(0);
     setIsStarting(true);
+    setIsStartClearing(false);
     setCountdownLabel("3");
     setIsPlaying(false);
     setIsPaused(false);
     setIsFailed(false);
     setFailOrigin(null);
 
-    const runCountdown = (label: "3" | "2" | "1" | "GO") => {
-      if (label === "GO") {
-        countdownStepTimeoutRef.current = window.setTimeout(() => {
-          beginGame(origin);
-        }, 650);
+    const startClearWave = () => {
+      setShowControlsHint(false);
+      setCountdownLabel(null);
+      setIsStartClearing(true);
+      const maxStartDelay = getMaxStartWaveDelay(columns, rows);
+      const waveTotalMs = prefersReducedMotion
+        ? START_WAVE_SETTLE_MS
+        : START_WAVE_DURATION_MS + maxStartDelay + START_WAVE_SETTLE_MS;
+
+      countdownStepTimeoutRef.current = window.setTimeout(() => {
+        beginGame(origin);
+      }, waveTotalMs);
+    };
+
+    const runCountdown = (label: "3" | "2" | "1") => {
+      if (label === "1") {
+        countdownStepTimeoutRef.current = window.setTimeout(startClearWave, 720);
         return;
       }
 
-      const nextLabel = label === "3" ? "2" : label === "2" ? "1" : "GO";
+      const nextLabel = label === "3" ? "2" : "1";
       countdownStepTimeoutRef.current = window.setTimeout(() => {
         setCountdownLabel(nextLabel);
         runCountdown(nextLabel);
@@ -604,7 +624,7 @@ export function ContributionSnake({
 
       <div
         ref={mapRef}
-        className={cx(styles.map, (isPlaying || isPaused || isFailed) && styles.focus)}
+        className={cx(styles.map, isGameBoardClean && styles.focus)}
         style={
           {
             ["--contribution-columns" as string]: String(columns),
@@ -631,7 +651,7 @@ export function ContributionSnake({
           <div className={styles.boardStack}>
             <div
               ref={boardRef}
-              className={cx(styles.board, isFailed && styles.failed)}
+              className={cx(styles.board, isGameBoardClean && styles.clean, isStartClearing && styles.starting, isFailed && styles.failed)}
               tabIndex={isPlaying ? 0 : -1}
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
@@ -642,9 +662,15 @@ export function ContributionSnake({
                     const cell = { x: weekIndex, y: dayIndex };
                     const isSnakeCell = snakeSet.has(cellKey(cell));
                     const isFoodCell = food ? cellsEqual(cell, food) : false;
-                    const gameActive = isPlaying || isPaused || isFailed;
-                    const isScatterCell = gameActive && gamePixels.has(cellKey(cell));
                     const failDistance = failOrigin ? Math.abs(cell.x - failOrigin.x) + Math.abs(cell.y - failOrigin.y) : 0;
+                    const startDelay = getStartWaveDelay(cell, columns, rows);
+                    const cellStyle =
+                      !prefersReducedMotion && (isFailed || isStartClearing)
+                        ? ({
+                            ...(isFailed ? { ["--fail-delay" as string]: `${failDistance * 18}ms` } : {}),
+                            ...(isStartClearing ? { ["--start-delay" as string]: `${startDelay}ms` } : {}),
+                          } as CSSProperties)
+                        : undefined;
 
                     return (
                       <button
@@ -652,16 +678,11 @@ export function ContributionSnake({
                         type="button"
                         className={cx(
                           styles.cell,
-                          gameActive ? styles.level0 : styles[`level${day.level}` as keyof typeof styles],
+                          isGameBoardClean ? styles.level0 : styles[`level${day.level}` as keyof typeof styles],
                           isSnakeCell && styles.snake,
                           isFoodCell && styles.food,
-                          isScatterCell && styles.scatter,
                         )}
-                        style={
-                          isFailed && !prefersReducedMotion
-                            ? ({ ["--fail-delay" as string]: `${failDistance * 18}ms` } as CSSProperties)
-                            : undefined
-                        }
+                        style={cellStyle}
                         disabled={isMobile}
                         onClick={() => {
                           if (isMobile) {
@@ -709,7 +730,7 @@ export function ContributionSnake({
             {isStarting && countdownLabel ? (
               <>
                 <strong>{CONTROLS_LABEL}</strong>
-                <span>{countdownLabel === "GO" ? "GO!!" : `STARTING IN ${countdownLabel}`}</span>
+                <span>{`STARTING IN ${countdownLabel}`}</span>
               </>
             ) : (
               <>
