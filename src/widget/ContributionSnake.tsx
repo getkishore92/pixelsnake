@@ -106,6 +106,14 @@ function GitHubMark() {
   );
 }
 
+function PauseIcon() {
+  return (
+    <svg className={styles.pauseIcon} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M12 22C6.47715 22 2 17.5228 2 12C2 6.47715 6.47715 2 12 2C17.5228 2 22 6.47715 22 12C22 17.5228 17.5228 22 12 22ZM9 9V15H11V9H9ZM13 9V15H15V9H13Z" />
+    </svg>
+  );
+}
+
 export function ContributionSnake({
   data,
   className,
@@ -617,6 +625,12 @@ export function ContributionSnake({
     event.stopPropagation();
   };
 
+  const handleBoardStackClick = () => {
+    if (isPaused && !isFailed && snake.length > 0) {
+      resumeGame();
+    }
+  };
+
   return (
     <section
       className={cx(styles.root, className)}
@@ -675,7 +689,7 @@ export function ContributionSnake({
             </div>
           ) : null}
 
-          <div className={styles.boardStack}>
+          <div className={styles.boardStack} onClick={handleBoardStackClick}>
             <div
               ref={boardRef}
               className={cx(styles.board, isGameBoardClean && styles.clean, isStartClearing && styles.starting, isFailed && styles.failed)}
@@ -743,6 +757,17 @@ export function ContributionSnake({
               <div className={cx(styles.callout, styles.gameOver)}>
                 <strong>GAME OVER</strong>
                 <span>press any square to restart</span>
+              </div>
+            ) : null}
+
+            {isPaused && !isFailed ? (
+              <div className={cx(styles.callout, styles.paused)}>
+                <span className={styles.pausedMessage}>
+                  <PauseIcon />
+                  <strong>PAUSED</strong>
+                  <span aria-hidden="true">-</span>
+                  <span>press anywhere to resume</span>
+                </span>
               </div>
             ) : null}
 

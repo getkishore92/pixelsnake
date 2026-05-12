@@ -471,6 +471,32 @@
   color: var(--color-danger-text);
 }
 
+.paused {
+  color: #334155;
+}
+
+.paused::before {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: color-mix(in srgb, #334155 18%, transparent);
+  width: min(24rem, calc(100% - 3rem));
+  height: 3.65rem;
+}
+
+.pausedMessage {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  color: #0f172a;
+  -webkit-text-fill-color: #0f172a;
+}
+
+.pauseIcon {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+}
+
 .controlsHint {
   gap: 0.35rem;
   color: #334155;
