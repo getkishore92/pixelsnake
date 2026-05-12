@@ -4,43 +4,54 @@
   <img src="thumbnail.png" alt="pixelsnake screenshot" width="640" />
 </p>
 
-A playable snake game built on your GitHub contribution graph. Click any cell to start, steer with arrow keys or WASD, and ship a weirdly delightful footer widget without an iframe.
+A React widget that turns a GitHub contribution graph into a desktop snake game. On mobile, it trims the graph to recent weeks and works as a compact activity widget.
 
-**[Live demo →](https://kishore.design)** (scroll to the footer)
-
----
-
-## What this repo is
-
-This repo is structured in two layers:
-
-- `src/widget/` is the reusable part you can copy into your own project.
-- `src/app/` is a tiny demo app that consumes the widget like a normal user would.
-
-The goal is not “install a package from npm” yet. The goal is “copy one folder into your site and have it work.”
+**[Live demo](https://kishore.design/playground/pixelsnake)**
 
 ---
 
-## Quick start for a Next.js app
+## What you get
 
-### 1. Copy the widget folder
+Pixelsnake ships the reusable widget from `src/widget/`. The demo app in `src/app/` only exists to run and test the widget.
 
-Copy the entire `src/widget/` folder into your project.
+The widget handles:
 
-It contains:
+- GitHub contribution data rendering
+- desktop snake controls with WASD and arrow keys
+- start, pause, resume, and game-over overlays
+- compact mode without month and weekday labels
+- mobile recent-activity layout with no game controls
+- light and dark theme defaults through CSS custom properties
 
-- `ContributionSnake.tsx`
-- `ContributionSnake.module.css`
-- `github-contributions.ts`
-- `types.ts`
-- `index.ts`
+---
 
-No global CSS merge is required. No font setup is required. No Tailwind tokens are required.
+## Install from GitHub
 
-### 2. Render it in a Server Component
+```bash
+npm install github:getkishore92/pixelsnake#main
+```
+
+If your Next.js app imports packages from source, add Pixelsnake to `transpilePackages`.
+
+```ts
+// next.config.ts
+import type { NextConfig } from "next";
+
+const nextConfig: NextConfig = {
+  transpilePackages: ["pixelsnake"],
+};
+
+export default nextConfig;
+```
+
+---
+
+## Render the widget
+
+Fetch contribution data on the server, then pass it to the widget.
 
 ```tsx
-import { ContributionSnake, getGithubContributions } from "@/widget";
+import { ContributionSnake, getGithubContributions } from "pixelsnake";
 
 export default async function Page() {
   const data = await getGithubContributions("yourusername");
@@ -49,11 +60,52 @@ export default async function Page() {
 }
 ```
 
-If your app does not use the `@/` alias, switch that import to the relative path where you copied the folder.
+The widget imports its own CSS module. You do not need an iframe or a global CSS merge.
 
-### 3. Done
+---
 
-The component imports its own CSS Module, so the widget styling comes along with the component automatically.
+## Footer mode
+
+Use `showCalendarLabels={false}` when the widget sits in a tight footer or sidebar.
+
+```tsx
+<ContributionSnake
+  data={data}
+  showCalendarLabels={false}
+/>
+```
+
+This keeps the pixel grid and removes the month and weekday labels.
+
+---
+
+## Track game state
+
+`onGameStateChange` lets a wrapper react to the game state. In Next.js, put that wrapper in a Client Component because function props cannot cross a Server Component boundary.
+
+```tsx
+"use client";
+
+import { useState } from "react";
+import { ContributionSnake, type ContributionSnakeGameState } from "pixelsnake";
+import type { ContributionCalendarData } from "pixelsnake";
+
+export function PixelsnakeFooter({ data }: { data: ContributionCalendarData }) {
+  const [state, setState] = useState<ContributionSnakeGameState>("idle");
+  const hasStarted = state === "playing" || state === "paused" || state === "failed";
+
+  return (
+    <>
+      <ContributionSnake
+        data={data}
+        showCalendarLabels={false}
+        onGameStateChange={setState}
+      />
+      <p>{hasStarted ? "pixelsnake widget by kishore" : "click any pixel to start the game"}</p>
+    </>
+  );
+}
+```
 
 ---
 
@@ -67,61 +119,60 @@ type ContributionSnakeProps = {
   className?: string;
   tickMs?: number;
   showHeader?: boolean;
+  showCalendarLabels?: boolean;
   title?: string;
+  onGameStateChange?: (state: ContributionSnakeGameState) => void;
 };
+
+type ContributionSnakeGameState =
+  | "idle"
+  | "countdown"
+  | "playing"
+  | "paused"
+  | "failed";
 ```
 
-Notes:
-
-- `data` is required.
-- `tickMs` controls snake speed. Lower is faster. Default is `120`.
-- `showHeader={false}` hides the built-in contribution header if you want to wrap it in your own card.
-- `title` lets you override the default heading text.
+| Prop | Default | Notes |
+| --- | --- | --- |
+| `data` | required | Contribution data for the grid |
+| `className` | none | Adds a class to the widget root |
+| `tickMs` | `120` | Snake speed in milliseconds per tick |
+| `showHeader` | `true` | Hides the built-in contribution title and score row when false |
+| `showCalendarLabels` | `true` | Hides month and weekday labels when false |
+| `title` | auto | Overrides the built-in heading |
+| `onGameStateChange` | none | Reports `idle`, `countdown`, `playing`, `paused`, and `failed` |
 
 ### `getGithubContributions(username)`
 
-This helper fetches GitHub contribution HTML on the server, parses it, and returns the widget data shape.
+This helper fetches GitHub contribution HTML on the server, parses it, and returns `ContributionCalendarData`.
 
-It is useful for Next.js server rendering, but it is optional. If you already have contribution data, you can skip the helper and pass `data` directly to the component.
+If you already have contribution data, pass your own data object to `ContributionSnake` and skip the helper.
 
 ---
 
-## How to play
+## Controls
+
+Desktop:
 
 | Control | Action |
-|---------|--------|
-| `↑ ↓ ← →` or `W A S D` | Steer |
-| `ESC` | Pause |
-| Click any cell | Start / restart |
-| Swipe | Steer on mobile |
+| --- | --- |
+| Click a pixel | Start or restart |
+| `W A S D` or arrow keys | Steer |
+| `Escape` | Pause |
+| Click outside the board | Pause |
+| Click the board while paused | Resume |
+
+Mobile:
+
+The widget shows recent activity only. It disables game input and removes horizontal scrolling.
 
 ---
 
-## Customization
+## Styling
 
-### Speed
+Pixelsnake uses `ContributionSnake.module.css`. You can wrap the component with your own container through `className`, or edit the CSS custom properties near the top of the module.
 
-```tsx
-<ContributionSnake data={data} tickMs={95} />
-```
-
-### Hide the built-in header
-
-```tsx
-<ContributionSnake data={data} showHeader={false} />
-```
-
-### Override the title
-
-```tsx
-<ContributionSnake data={data} title="Play my GitHub year" />
-```
-
-### Theme
-
-The widget has its own default colors and supports light/dark mode automatically.
-
-You can also force theme from your page shell with:
+The widget follows the page theme when your app sets:
 
 ```html
 <html data-theme="dark">
@@ -133,36 +184,6 @@ or:
 <html data-theme="light">
 ```
 
-### Styling
-
-The widget is intentionally self-contained inside `ContributionSnake.module.css`.
-
-If you want to restyle it:
-
-- tweak the CSS custom properties near the top of `ContributionSnake.module.css`
-- or wrap the component with your own container and use `className`
-
----
-
-## Non-Next usage
-
-The `ContributionSnake` component itself is plain React plus a CSS Module.
-
-The only Next-specific piece is `getGithubContributions`, because it uses Next server `fetch` caching semantics. If you are not using Next.js:
-
-- keep `ContributionSnake.tsx`
-- keep `ContributionSnake.module.css`
-- keep `types.ts`
-- provide your own `ContributionCalendarData`
-
----
-
-## Caveats
-
-- The default GitHub helper scrapes GitHub’s contribution HTML, so it may need updates if GitHub changes that markup.
-- The widget is desktop-first. Mobile is supported, but the interaction is still best on desktop.
-- Audio is generated with the Web Audio API and unlocks on first interaction.
-
 ---
 
 ## Repo structure
@@ -170,11 +191,19 @@ The only Next-specific piece is `getGithubContributions`, because it uses Next s
 ```txt
 src/
   app/        # demo app
-  widget/     # cloneable widget files
+  widget/     # reusable widget package
 ```
+
+---
+
+## Caveats
+
+- The GitHub helper parses GitHub contribution HTML. If GitHub changes that markup, the helper may need an update.
+- The game targets desktop. Mobile keeps the graph readable and recent instead of exposing game controls.
+- Audio uses the Web Audio API and starts after the first user interaction.
 
 ---
 
 ## Tech
 
-React · Next.js · TypeScript · CSS Modules
+React, Next.js, TypeScript, CSS Modules
