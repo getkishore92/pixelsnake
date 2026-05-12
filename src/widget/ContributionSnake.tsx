@@ -17,7 +17,10 @@ export type ContributionSnakeProps = {
   showHeader?: boolean;
   showCalendarLabels?: boolean;
   title?: string;
+  onGameStateChange?: (state: ContributionSnakeGameState) => void;
 };
+
+export type ContributionSnakeGameState = "idle" | "countdown" | "playing" | "paused" | "failed";
 
 const DAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""] as const;
 const DEFAULT_TICK_MS = 120;
@@ -110,6 +113,7 @@ export function ContributionSnake({
   showHeader = true,
   showCalendarLabels = true,
   title,
+  onGameStateChange,
 }: ContributionSnakeProps) {
   const rows = 7;
   const totalMonthColumns = useMemo(() => data.months.reduce((sum, month) => sum + month.span, 0), [data.months]);
@@ -156,6 +160,15 @@ export function ContributionSnake({
   const headerTitle =
     title ?? (data.total > 0 ? `${data.total} contributions in the last year` : `${data.username}'s contribution map`);
   const isGameBoardClean = !isMobile && (isPlaying || isPaused || isFailed);
+  const gameState: ContributionSnakeGameState = isFailed
+    ? "failed"
+    : isPlaying
+      ? "playing"
+      : isStarting
+        ? "countdown"
+        : isPaused
+          ? "paused"
+          : "idle";
 
   useEffect(() => {
     const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -257,6 +270,10 @@ export function ContributionSnake({
   useEffect(() => {
     columnsRef.current = columns;
   }, [columns]);
+
+  useEffect(() => {
+    onGameStateChange?.(gameState);
+  }, [gameState, onGameStateChange]);
 
   useEffect(() => {
     if (!isPlaying) {
@@ -601,7 +618,11 @@ export function ContributionSnake({
   };
 
   return (
-    <section className={cx(styles.root, className)} aria-label="GitHub contribution activity">
+    <section
+      className={cx(styles.root, className)}
+      data-pixelsnake-state={gameState}
+      aria-label="GitHub contribution activity"
+    >
       {showHeader ? (
         <div className={styles.header}>
           <div className={styles.titleGroup}>
@@ -717,35 +738,35 @@ export function ContributionSnake({
                 </div>
               ))}
             </div>
+
+            {isFailed ? (
+              <div className={cx(styles.callout, styles.gameOver)}>
+                <strong>GAME OVER</strong>
+                <span>press any square to restart</span>
+              </div>
+            ) : null}
+
+            {(isStarting || isPlaying) && showControlsHint ? (
+              <div
+                key={isStarting ? `countdown-${countdownLabel ?? "idle"}` : "controls-hint"}
+                className={cx(styles.callout, isStarting ? styles.startCountdown : styles.controlsHint)}
+                aria-hidden="true"
+              >
+                {isStarting && countdownLabel ? (
+                  <>
+                    <strong>{CONTROLS_LABEL}</strong>
+                    <span>{`STARTING IN ${countdownLabel}`}</span>
+                  </>
+                ) : (
+                  <>
+                    <strong>{CONTROLS_LABEL}</strong>
+                    <span>COLLECT PIXELS. DON&apos;T CRASH.</span>
+                  </>
+                )}
+              </div>
+            ) : null}
           </div>
         </div>
-
-        {isFailed ? (
-          <div className={cx(styles.callout, styles.gameOver)}>
-            <strong>GAME OVER</strong>
-            <span>press any square to restart</span>
-          </div>
-        ) : null}
-
-        {(isStarting || isPlaying) && showControlsHint ? (
-          <div
-            key={isStarting ? `countdown-${countdownLabel ?? "idle"}` : "controls-hint"}
-            className={cx(styles.callout, isStarting ? styles.startCountdown : styles.controlsHint)}
-            aria-hidden="true"
-          >
-            {isStarting && countdownLabel ? (
-              <>
-                <strong>{CONTROLS_LABEL}</strong>
-                <span>{`STARTING IN ${countdownLabel}`}</span>
-              </>
-            ) : (
-              <>
-                <strong>{CONTROLS_LABEL}</strong>
-                <span>COLLECT PIXELS. DON&apos;T CRASH.</span>
-              </>
-            )}
-          </div>
-        ) : null}
       </div>
     </section>
   );
