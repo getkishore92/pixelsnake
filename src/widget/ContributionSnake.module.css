@@ -239,6 +239,10 @@
   display: none;
 }
 
+.noCalendarLabels {
+  --contribution-label-width: 0rem;
+}
+
 .months {
   display: grid;
   width: max-content;
@@ -259,6 +263,10 @@
   gap: var(--contribution-gap);
   width: max-content;
   min-width: 100%;
+}
+
+.noCalendarLabels .mapBody {
+  gap: 0;
 }
 
 .boardStack {
@@ -606,6 +614,10 @@
     overflow-x: auto;
     overflow-y: hidden;
     padding-bottom: 0.15rem;
+  }
+
+  .map.noCalendarLabels {
+    --contribution-label-width: 0rem;
   }
 
   .months {

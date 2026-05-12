@@ -15,6 +15,7 @@ export type ContributionSnakeProps = {
   className?: string;
   tickMs?: number;
   showHeader?: boolean;
+  showCalendarLabels?: boolean;
   title?: string;
 };
 
@@ -107,6 +108,7 @@ export function ContributionSnake({
   className,
   tickMs = DEFAULT_TICK_MS,
   showHeader = true,
+  showCalendarLabels = true,
   title,
 }: ContributionSnakeProps) {
   const rows = 7;
@@ -203,7 +205,7 @@ export function ContributionSnake({
     }
 
     const remSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize) || 16;
-    const labelWidth = 2.25 * remSize;
+    const labelWidth = showCalendarLabels ? 2.25 * remSize : 0;
     const gapWidth = 0.24 * remSize;
     const minCellSize = 0.72 * remSize;
     const safetyPadding = 2;
@@ -221,7 +223,7 @@ export function ContributionSnake({
     observer.observe(element);
 
     return () => observer.disconnect();
-  }, [columns, isMobile]);
+  }, [columns, isMobile, showCalendarLabels]);
 
   const snakeSet = useMemo(() => new Set(snake.map((cell) => cellKey(cell))), [snake]);
 
@@ -624,7 +626,7 @@ export function ContributionSnake({
 
       <div
         ref={mapRef}
-        className={cx(styles.map, isGameBoardClean && styles.focus)}
+        className={cx(styles.map, !showCalendarLabels && styles.noCalendarLabels, isGameBoardClean && styles.focus)}
         style={
           {
             ["--contribution-columns" as string]: String(columns),
@@ -633,20 +635,24 @@ export function ContributionSnake({
         }
         onMouseDown={handleMapPointerDown}
       >
-        <div className={styles.months} aria-hidden="true">
-          {data.months.map((month) => (
-            <span key={`${month.label}-${month.start}`} style={{ gridColumn: `${month.start + 1} / span ${month.span}` }}>
-              {month.label}
-            </span>
-          ))}
-        </div>
-
-        <div className={styles.mapBody}>
-          <div className={styles.dayLabels} aria-hidden="true">
-            {DAY_LABELS.map((label, index) => (
-              <span key={`${label}-${index}`}>{label}</span>
+        {showCalendarLabels ? (
+          <div className={styles.months} aria-hidden="true">
+            {data.months.map((month) => (
+              <span key={`${month.label}-${month.start}`} style={{ gridColumn: `${month.start + 1} / span ${month.span}` }}>
+                {month.label}
+              </span>
             ))}
           </div>
+        ) : null}
+
+        <div className={styles.mapBody}>
+          {showCalendarLabels ? (
+            <div className={styles.dayLabels} aria-hidden="true">
+              {DAY_LABELS.map((label, index) => (
+                <span key={`${label}-${index}`}>{label}</span>
+              ))}
+            </div>
+          ) : null}
 
           <div className={styles.boardStack}>
             <div
