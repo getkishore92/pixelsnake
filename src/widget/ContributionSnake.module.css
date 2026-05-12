@@ -474,17 +474,21 @@
   height: 5.5rem;
 }
 
-.controlsHint strong {
+.controlsHint strong,
+.startCountdown strong {
   font-size: 1.0625rem;
   line-height: 1.05;
   color: #0f172a;
+  -webkit-text-fill-color: #0f172a;
 }
 
-.controlsHint span {
+.controlsHint span,
+.startCountdown span {
   font-size: var(--text-sm);
   line-height: 1.05;
   max-width: none;
   color: #64748b;
+  -webkit-text-fill-color: #64748b;
 }
 
 .startCountdown::before {
