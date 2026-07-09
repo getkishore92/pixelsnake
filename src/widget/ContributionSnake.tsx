@@ -29,7 +29,7 @@ export type ContributionSnakeScoreStore = {
 
 const DAY_LABELS = ["", "Mon", "", "Wed", "", "Fri", ""] as const;
 const DEFAULT_TICK_MS = 120;
-const CONTROLS_LABEL = "USE AWSD OR ARROW KEYS TO PLAY";
+const CONTROLS_LABEL = "USE WASD OR ARROW KEYS TO PLAY";
 const START_WAVE_DURATION_MS = 360;
 const START_WAVE_DIAGONAL_DELAY_MS = 260;
 const START_WAVE_RIPPLE_MS = 16;
@@ -753,6 +753,36 @@ export function ContributionSnake({
     }
   };
 
+  const handleBoardKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    const isActivationKey = event.key === "Enter" || event.key === " ";
+
+    if (isMobile || !isActivationKey || isPlaying || isStarting) {
+      return;
+    }
+
+    event.preventDefault();
+
+    if (isPaused && !isFailed && snake.length > 0) {
+      resumeGame();
+      return;
+    }
+
+    startGame({
+      x: Math.floor(columns / 2),
+      y: Math.floor(rows / 2),
+    });
+  };
+
+  const boardLabel = isPlaying
+    ? "Pixelsnake game board. Move with WASD or the arrow keys. Press Escape to pause."
+    : isPaused
+      ? "Pixelsnake paused. Press Enter or Space to resume."
+      : isFailed
+        ? "Pixelsnake game over. Press Enter or Space to restart."
+        : isStarting
+          ? "Pixelsnake starting."
+          : "Pixelsnake game board. Press Enter or Space to start.";
+
   return (
     <section
       className={cx(styles.root, className)}
@@ -815,7 +845,10 @@ export function ContributionSnake({
             <div
               ref={boardRef}
               className={cx(styles.board, isGameBoardClean && styles.clean, isStartClearing && styles.starting, isFailed && styles.failed)}
-              tabIndex={isPlaying ? 0 : -1}
+              role="application"
+              aria-label={boardLabel}
+              tabIndex={isMobile ? -1 : 0}
+              onKeyDown={handleBoardKeyDown}
               onTouchStart={handleTouchStart}
               onTouchEnd={handleTouchEnd}
             >
@@ -846,6 +879,7 @@ export function ContributionSnake({
                           isFoodCell && styles.food,
                         )}
                         style={cellStyle}
+                        tabIndex={-1}
                         disabled={isMobile}
                         onClick={() => {
                           if (isMobile) {

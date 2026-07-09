@@ -101,7 +101,7 @@ export function PixelsnakeFooter({ data }: { data: ContributionCalendarData }) {
         showCalendarLabels={false}
         onGameStateChange={setState}
       />
-      <p>{hasStarted ? "pixelsnake widget by kishore" : "click any pixel to start the game"}</p>
+      <p>{hasStarted ? "pixelsnake widget by kishore" : "click a pixel or press Enter to start"}</p>
     </>
   );
 }
@@ -187,6 +187,7 @@ Desktop:
 | Control | Action |
 | --- | --- |
 | Click a pixel | Start or restart |
+| `Enter` or `Space` | Start, restart, or resume |
 | `W A S D` or arrow keys | Steer |
 | `Escape` | Pause |
 | Click outside the board | Pause |
