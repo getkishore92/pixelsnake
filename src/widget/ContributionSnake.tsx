@@ -47,6 +47,13 @@ function cellsEqual(a: Cell, b: Cell) {
   return a.x === b.x && a.y === b.y;
 }
 
+function getDirectionName(direction: Cell) {
+  if (direction.x === -1) return "left";
+  if (direction.x === 1) return "right";
+  if (direction.y === -1) return "up";
+  return "down";
+}
+
 function normalizeScore(score: unknown) {
   return typeof score === "number" && Number.isFinite(score) && score >= 0 ? Math.floor(score) : null;
 }
@@ -857,6 +864,7 @@ export function ContributionSnake({
                   {week.map((day, dayIndex) => {
                     const cell = { x: weekIndex, y: dayIndex };
                     const isSnakeCell = snakeSet.has(cellKey(cell));
+                    const isHeadCell = snake.length > 0 && cellsEqual(cell, snake[0]);
                     const isFoodCell = food ? cellsEqual(cell, food) : false;
                     const failDistance = failOrigin ? Math.abs(cell.x - failOrigin.x) + Math.abs(cell.y - failOrigin.y) : 0;
                     const startDelay = getStartWaveDelay(cell, columns, rows);
@@ -876,9 +884,11 @@ export function ContributionSnake({
                           styles.cell,
                           isGameBoardClean ? styles.level0 : styles[`level${day.level}` as keyof typeof styles],
                           isSnakeCell && styles.snake,
+                          isHeadCell && styles.head,
                           isFoodCell && styles.food,
                         )}
                         style={cellStyle}
+                        data-direction={isHeadCell ? getDirectionName(direction) : undefined}
                         tabIndex={-1}
                         disabled={isMobile}
                         onClick={() => {
@@ -902,7 +912,14 @@ export function ContributionSnake({
                               ? `Snake board cell ${weekIndex + 1}, ${dayIndex + 1}`
                               : `${day.date || "Contribution cell"}`
                         }
-                      />
+                      >
+                        {isHeadCell ? (
+                          <span className={styles.eyes} aria-hidden="true">
+                            <span />
+                            <span />
+                          </span>
+                        ) : null}
+                      </button>
                     );
                   })}
                 </div>

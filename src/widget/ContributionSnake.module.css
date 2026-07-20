@@ -80,6 +80,10 @@
   --color-snake-active: var(--green-950);
   --color-snake-food-active: var(--green-700);
   --color-snake-glow-active: color-mix(in srgb, var(--green-50) 16%, transparent);
+  --color-snake-head: color-mix(in srgb, var(--color-snake) 72%, var(--color-surface));
+  --color-snake-head-active: color-mix(in srgb, var(--color-snake-active) 72%, var(--color-surface));
+  --color-snake-eye: var(--color-surface);
+  --color-snake-eye-active: var(--color-surface);
   --color-danger-wave: var(--red-600);
   --color-danger-wave-strong: var(--red-800);
   --color-danger-text: var(--red-500);
@@ -226,6 +230,9 @@
     0.72rem,
     calc((100% - var(--contribution-label-width) - (var(--contribution-gap) * var(--contribution-columns))) / var(--contribution-columns))
   );
+  --snake-eye-size: calc(var(--contribution-cell-size) * 0.16);
+  --snake-eye-gap: calc(var(--contribution-cell-size) * 0.28);
+  --snake-eye-inset: calc(var(--contribution-cell-size) * 0.06);
   width: 100%;
   overflow-x: hidden;
   position: relative;
@@ -319,6 +326,7 @@
 
 .cell {
   appearance: none;
+  position: relative;
   border: 0;
   border-radius: 0.18rem;
   width: var(--contribution-cell-size);
@@ -399,6 +407,53 @@
   box-shadow: inset 0 0 0 1px var(--color-snake-glow);
 }
 
+.head {
+  background: var(--color-snake-head);
+}
+
+.eyes {
+  position: absolute;
+  display: flex;
+  gap: var(--snake-eye-gap);
+  pointer-events: none;
+}
+
+.eyes span {
+  width: var(--snake-eye-size);
+  height: var(--snake-eye-size);
+  border-radius: 50%;
+  background: var(--color-snake-eye);
+}
+
+.head[data-direction="up"] .eyes,
+.head[data-direction="down"] .eyes {
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.head[data-direction="up"] .eyes {
+  top: var(--snake-eye-inset);
+}
+
+.head[data-direction="down"] .eyes {
+  bottom: var(--snake-eye-inset);
+}
+
+.head[data-direction="left"] .eyes,
+.head[data-direction="right"] .eyes {
+  top: 50%;
+  flex-direction: column;
+  transform: translateY(-50%);
+}
+
+.head[data-direction="left"] .eyes {
+  left: var(--snake-eye-inset);
+}
+
+.head[data-direction="right"] .eyes {
+  right: var(--snake-eye-inset);
+}
+
 .food {
   background: var(--color-snake-food);
 }
@@ -407,6 +462,14 @@
   background: var(--color-snake-active);
   box-shadow: inset 0 0 0 1px var(--color-snake-glow-active);
   opacity: 1;
+}
+
+.focus .head {
+  background: var(--color-snake-head-active);
+}
+
+.focus .eyes span {
+  background: var(--color-snake-eye-active);
 }
 
 .focus .food {
